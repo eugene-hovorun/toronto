@@ -1,24 +1,24 @@
 <template>
   <div class="word-analysis-page">
-    <h1>Podcast Speech Analysis</h1>
+    <h1>Аналіз промов у подкасті</h1>
 
     <div class="search-container">
-      <label for="word-input">Enter a word to analyze:</label>
+      <label for="word-input">Введіть слово для аналізу:</label>
       <div class="input-wrapper">
         <input
           id="word-input"
           v-model="searchWord"
           type="text"
-          placeholder="Enter word..."
+          placeholder="Введіть слово..."
           @keyup.enter="analyzeWord"
         />
         <button @click="analyzeWord" :disabled="!searchWord.trim()">
-          Analyze
+          Аналізувати
         </button>
       </div>
 
       <div class="common-words">
-        <p>Common words:</p>
+        <p>Популярні слова:</p>
         <div class="word-tags">
           <span
             v-for="(word, index) in commonWords"
@@ -35,29 +35,32 @@
     <WordChart :word="activeWord" v-if="activeWord" />
 
     <div class="instructions" v-else>
-      <h2>Instructions</h2>
+      <h2>Інструкції</h2>
       <p>
-        Enter a word in the search box to analyze its usage across all podcast
-        episodes.
+        Введіть слово в пошукове поле, щоб проаналізувати його вживання в усіх
+        епізодах подкасту.
       </p>
-      <p>The analysis will show:</p>
+      <p>Аналіз покаже:</p>
       <ul>
-        <li>Frequency of the word in each episode</li>
-        <li>Which speakers use the word most often</li>
-        <li>Time distribution (at what point in episodes the word appears)</li>
-        <li>Example contexts where the word is used</li>
+        <li>Частоту вживання слова в кожному епізоді</li>
+        <li>Які спікери найчастіше використовують це слово</li>
+        <li>Приклади контексту, де вживається слово</li>
       </ul>
-      <p>You can also click on the common words above for quick analysis.</p>
+      <p>
+        Ви також можете натиснути на популярні слова вище для швидкого аналізу.
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
+import WordChart from "~/components/WordChart.vue";
 
 // Common words to provide as shortcuts
 const commonWords = [
   "Україна",
+  "кастомний",
   "війна",
   "донат",
   "потік",
@@ -83,6 +86,7 @@ const selectCommonWord = (word) => {
 
 <style scoped>
 .word-analysis-page {
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px;
 }

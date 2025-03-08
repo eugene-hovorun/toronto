@@ -1,19 +1,19 @@
 <template>
   <div class="word-chart-container">
     <div v-if="loading" class="loading">
-      <p>Loading word analysis...</p>
+      <p>Завантаження аналізу слова...</p>
     </div>
     <div v-else-if="error" class="error">
-      <p>Error: {{ error }}</p>
+      <p>Помилка: {{ error }}</p>
     </div>
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
       class="no-data"
     >
-      <p>No data available for word "{{ word }}"</p>
+      <p>Немає даних для слова "{{ word }}"</p>
     </div>
     <div v-else>
-      <h3>Usage of "{{ word }}" across episodes</h3>
+      <h3>Вживання слова "{{ word }}" в епізодах</h3>
 
       <!-- Episode frequency bar chart -->
       <div class="chart-container">
@@ -22,7 +22,7 @@
 
       <!-- Speaker distribution pie chart -->
       <div class="chart-container">
-        <h4>Speaker Distribution</h4>
+        <h4>Розподіл за спікерами</h4>
         <Pie :data="speakerChartData" :options="pieChartOptions" />
       </div>
 
@@ -31,7 +31,7 @@
         class="contexts"
         v-if="wordData.contexts && wordData.contexts.length"
       >
-        <h4>Example contexts:</h4>
+        <h4>Приклади вживання:</h4>
         <div
           v-for="(context, index) in wordData.contexts.slice(0, 5)"
           :key="index"
@@ -139,7 +139,7 @@ const episodeChartData = computed(() => {
     labels: episodes,
     datasets: [
       {
-        label: `Occurrences of "${props.word}"`,
+        label: `Вживання слова "${props.word}"`,
         data: counts,
         backgroundColor: colors,
         borderColor: colors.map((color) => color.replace("0.7", "1")),
