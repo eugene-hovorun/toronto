@@ -15,6 +15,14 @@
     <div v-else>
       <h3>Вживання слова "{{ word }}" в епізодах</h3>
 
+      <!-- Time range caption -->
+      <div class="time-range-caption">
+        <p>
+          Період аналізу: {{ formatEpisodeDate(timeRange.firstDate) }} —
+          {{ formatEpisodeDate(timeRange.lastDate) }}
+        </p>
+      </div>
+
       <!-- Episode frequency bar chart -->
       <div class="chart-container">
         <Bar :data="episodeChartData" :options="barChartOptions" />
@@ -86,6 +94,29 @@ const wordData = ref(null);
 const loading = ref(false);
 const error = ref(null);
 
+// Computed property for time range
+const timeRange = computed(() => {
+  if (
+    !wordData.value ||
+    !wordData.value.episodes ||
+    wordData.value.episodes.length === 0
+  ) {
+    return { firstDate: "", lastDate: "" };
+  }
+
+  // Make a copy of episodes to avoid mutating the original data
+  const episodes = [...wordData.value.episodes];
+
+  // Sort episodes by date
+  episodes.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Get first and last dates
+  const firstDate = episodes[0].date;
+  const lastDate = episodes[episodes.length - 1].date;
+
+  return { firstDate, lastDate };
+});
+
 // Generate random colors for charts
 const generateColors = (count) => {
   const colors = [];
@@ -100,6 +131,7 @@ const generateColors = (count) => {
 
 // Format episode date (from filename like 2024-07-24)
 const formatEpisodeDate = (episode) => {
+  if (!episode) return "";
   const [year, month, day] = episode.split("-");
   return `${day}.${month}.${year}`;
 };
@@ -270,6 +302,13 @@ watch(
 .error {
   color: #d32f2f;
   background-color: #ffebee;
+}
+
+.time-range-caption {
+  text-align: center;
+  margin-bottom: 15px;
+  font-style: italic;
+  color: #666;
 }
 
 .contexts {

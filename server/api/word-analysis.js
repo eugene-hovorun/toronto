@@ -6,6 +6,28 @@ import { parseSRT } from "../utils/srtParser";
 const readdir = promisify(fs.readdir);
 const readFile = promisify(fs.readFile);
 
+// Helper function to check if a context is meaningful enough to display
+function isValidContext(text, searchTerm) {
+  if (!text) return false;
+
+  // Check if text is too short (less than 10 characters)
+  if (text.length < 10) return false;
+
+  // Remove the search term from the text to see what else is there
+  const textWithoutSearchTerm = text
+    .toLowerCase()
+    .replace(new RegExp(searchTerm, "gi"), "")
+    .trim();
+
+  // Count words in the remaining text
+  const wordCount = textWithoutSearchTerm
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
+
+  // Context is valid if it has at least 3 other words besides the search term
+  return wordCount >= 3;
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
@@ -131,7 +153,11 @@ export default defineEventHandler(async (event) => {
               (result.speakers[speaker] || 0) + occurrences;
 
             // Add to contexts (limited to avoid too much data)
-            if (result.contexts.length < 20) {
+            // Only add if the context is valid and meaningful
+            if (
+              result.contexts.length < 20 &&
+              isValidContext(text, searchTerm)
+            ) {
               result.contexts.push({
                 episode: episodeDir,
                 time: subtitle.start,
