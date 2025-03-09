@@ -28,6 +28,12 @@ function isValidContext(text, searchTerm) {
   return wordCount >= 3;
 }
 
+// Helper function to format timestamp for YouTube URL
+function formatYouTubeTimestamp(seconds) {
+  // YouTube timestamp format is just seconds for any value
+  return Math.floor(seconds);
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
@@ -93,9 +99,23 @@ export default defineEventHandler(async (event) => {
           `${episodeDir}.srt`
         );
 
+        const jsonFilePath = path.join(
+          assetsDir,
+          episodeDir,
+          `${episodeDir}.json`
+        );
+
         // Check if SRT file exists
         if (!fs.existsSync(srtFilePath)) {
           console.warn(`SRT file not found for episode ${episodeDir}`);
+          continue;
+        }
+
+        // Check if JSON metadata file exists
+        if (!fs.existsSync(jsonFilePath)) {
+          console.warn(
+            `JSON metadata file not found for episode ${episodeDir}`
+          );
           continue;
         }
 
@@ -104,6 +124,16 @@ export default defineEventHandler(async (event) => {
         // Read and parse SRT file
         const srtContent = await readFile(srtFilePath, "utf-8");
         const subtitles = parseSRT(srtContent);
+
+        // Read and parse JSON metadata file
+        const jsonContent = await readFile(jsonFilePath, "utf-8");
+        const metadata = JSON.parse(jsonContent);
+
+        // Extract video ID from thumbnail URL
+        const thumbnailUrl = metadata.thumbnails?.default?.url || "";
+        const videoId = thumbnailUrl.match(/\/vi\/([^\/]+)\//)
+          ? thumbnailUrl.match(/\/vi\/([^\/]+)\//)[1]
+          : "";
 
         console.log(
           `Parsed ${subtitles.length} subtitle entries for ${episodeDir}`
@@ -158,11 +188,19 @@ export default defineEventHandler(async (event) => {
               result.contexts.length < 20 &&
               isValidContext(text, searchTerm)
             ) {
+              // Create YouTube link with timestamp
+              const youtubeTimestamp = formatYouTubeTimestamp(subtitle.start);
+              const youtubeLink = videoId
+                ? `https://www.youtube.com/watch?v=${videoId}&t=${youtubeTimestamp}`
+                : null;
+
               result.contexts.push({
                 episode: episodeDir,
                 time: subtitle.start,
                 speaker,
                 text: `${match[2].trim()}`,
+                thumbnailUrl: thumbnailUrl,
+                youtubeLink: youtubeLink,
               });
             }
           }

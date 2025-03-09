@@ -45,14 +45,49 @@
           :key="index"
           class="context-item"
         >
-          <p>
-            <span class="episode">{{
-              formatEpisodeDate(context.episode)
-            }}</span>
-            <span class="timecode">[{{ formatTimecode(context.time) }}]</span>
-            <span class="speaker">{{ context.speaker }}:</span>
-            <span class="text" v-html="highlightWord(context.text)"></span>
-          </p>
+          <div class="context-layout">
+            <!-- Thumbnail with YouTube link -->
+            <div class="thumbnail-container" v-if="context.thumbnailUrl">
+              <a
+                :href="context.youtubeLink"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="video-link"
+              >
+                <img
+                  :src="context.thumbnailUrl"
+                  alt="Video thumbnail"
+                  class="thumbnail"
+                />
+                <div class="play-icon">▶</div>
+              </a>
+            </div>
+
+            <!-- Context text and metadata -->
+            <div class="context-content">
+              <p>
+                <span class="episode">{{
+                  formatEpisodeDate(context.episode)
+                }}</span>
+                <span class="timecode"
+                  >[{{ formatTimecode(context.time) }}]</span
+                >
+                <span class="speaker">{{ context.speaker }}:</span>
+                <span class="text" v-html="highlightWord(context.text)"></span>
+              </p>
+
+              <!-- YouTube link as text -->
+              <div class="youtube-link" v-if="context.youtubeLink">
+                <a
+                  :href="context.youtubeLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Переглянути на YouTube
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -272,8 +307,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Remove the onMounted handler that was causing duplicate requests
 </script>
 
 <style scoped>
@@ -318,10 +351,55 @@ watch(
 }
 
 .context-item {
-  margin-bottom: 10px;
-  padding: 10px;
+  margin-bottom: 15px;
+  padding: 15px;
   background-color: #f9f9f9;
   border-radius: 4px;
+}
+
+.context-layout {
+  display: flex;
+  gap: 15px;
+}
+
+.thumbnail-container {
+  position: relative;
+  flex-shrink: 0;
+  width: 120px;
+  height: 90px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.video-link:hover .thumbnail {
+  transform: scale(1.05);
+}
+
+.play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.context-content {
+  flex-grow: 1;
 }
 
 .episode {
@@ -343,5 +421,21 @@ watch(
 .highlight {
   background-color: yellow;
   padding: 0 2px;
+}
+
+.youtube-link {
+  margin-top: 8px;
+}
+
+.youtube-link a {
+  display: inline-flex;
+  align-items: center;
+  color: #ff0000;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.youtube-link a:hover {
+  text-decoration: underline;
 }
 </style>
