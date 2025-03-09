@@ -14,6 +14,13 @@ export const useWordChartData = (
 ) => {
   const { formatEpisodeDate } = formatUtils;
 
+  // Define constant colors for each speaker
+  const SPEAKER_COLORS: Record<string, string> = {
+    Максим: "#F892AB", // Blue
+    Олександра: "#D57DFC", // Pink
+    Аліна: "#7FD374", // Green
+  };
+
   // Computed property for time range
   const timeRange = computed<TimeRange>(() => {
     if (
@@ -77,7 +84,11 @@ export const useWordChartData = (
 
     const speakers = Object.keys(wordData.value.speakers);
     const counts = speakers.map((speaker) => wordData.value!.speakers[speaker]);
-    const colors = chartUtils.generateColors(speakers.length);
+
+    // Use our predefined constant colors for each speaker instead of generating random colors
+    const colors = speakers.map(
+      (speaker) => SPEAKER_COLORS[speaker] || chartUtils.generateColors(1)[0]
+    );
 
     return {
       labels: speakers,
@@ -85,9 +96,14 @@ export const useWordChartData = (
         {
           data: counts,
           backgroundColor: colors,
-          hoverBackgroundColor: colors.map((color: string) =>
-            color.replace("0.7", "0.9")
-          ),
+          hoverBackgroundColor: colors.map((color: string) => {
+            // For hex colors, make them slightly lighter on hover
+            if (color.startsWith("#")) {
+              return color + "CC"; // Add 80% opacity
+            }
+            // For rgba colors (fallback from chartUtils)
+            return color.replace("0.7", "0.9");
+          }),
         },
       ],
     };
@@ -134,6 +150,28 @@ export const useWordChartData = (
     try {
       // Use the API service to fetch data
       const data = await wordAnalysisAPI.fetchWordData(props.word);
+
+      // Filter data to only include the three specified speakers
+      if (data && data.speakers) {
+        const validSpeakers = ["Максим", "Олександра", "Аліна"];
+
+        // Filter speakers object
+        const filteredSpeakers: Record<string, number> = {};
+        for (const speaker of validSpeakers) {
+          if (data.speakers[speaker]) {
+            filteredSpeakers[speaker] = data.speakers[speaker];
+          }
+        }
+        data.speakers = filteredSpeakers;
+
+        // Filter contexts array to include only valid speakers
+        if (data.contexts) {
+          data.contexts = data.contexts.filter((context) =>
+            validSpeakers.includes(context.speaker)
+          );
+        }
+      }
+
       wordData.value = data;
     } catch (err) {
       console.error("Error fetching word data:", err);

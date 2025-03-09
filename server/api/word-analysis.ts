@@ -8,6 +8,9 @@ import type { WordAnalysisData, VideoMetadata } from "~/types";
 const readdir = promisify(fs.readdir);
 const readFile = promisify(fs.readFile);
 
+// List of valid speakers to include in the analysis
+const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
+
 // Helper function to check if a context is meaningful enough to display
 function isValidContext(text: string, searchTerm: string): boolean {
   if (!text) return false;
@@ -154,6 +157,9 @@ export default defineEventHandler(async (event: H3Event) => {
 
           const speaker = match[1].trim();
           const text = match[2].trim();
+
+          // Skip if the speaker is not in our valid speakers list
+          if (!VALID_SPEAKERS.includes(speaker)) continue;
 
           // Check if text contains our search term
           const textLower = text.toLowerCase();
