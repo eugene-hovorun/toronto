@@ -1,13 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
-import { parseSRT } from "../utils/srtParser";
+import { parseSRT } from "~/utils";
+import { H3Event } from "h3";
+import type { WordAnalysisData, VideoMetadata } from "~/types";
 
 const readdir = promisify(fs.readdir);
 const readFile = promisify(fs.readFile);
 
 // Helper function to check if a context is meaningful enough to display
-function isValidContext(text, searchTerm) {
+function isValidContext(text: string, searchTerm: string): boolean {
   if (!text) return false;
 
   // Check if text is too short (less than 10 characters)
@@ -29,15 +31,16 @@ function isValidContext(text, searchTerm) {
 }
 
 // Helper function to format timestamp for YouTube URL
-function formatYouTubeTimestamp(seconds) {
+function formatYouTubeTimestamp(seconds: number): number {
   // YouTube timestamp format is just seconds for any value
   return Math.floor(seconds);
 }
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
+  const query = getQuery(event);
+
   try {
-    const query = getQuery(event);
-    const { word } = query;
+    const { word } = query as { word?: string };
 
     if (!word || typeof word !== "string" || word.trim() === "") {
       throw createError({
@@ -59,8 +62,10 @@ export default defineEventHandler(async (event) => {
         word: searchTerm,
         totalCount: 0,
         episodes: [],
+        speakers: {},
+        contexts: [],
         error: "Assets directory not found",
-      };
+      } as WordAnalysisData;
     }
 
     const episodeDirs = await readdir(assetsDir);
@@ -76,7 +81,7 @@ export default defineEventHandler(async (event) => {
     validEpisodeDirs.sort((a, b) => b.localeCompare(a));
 
     // Initialize result object
-    const result = {
+    const result: WordAnalysisData = {
       word: searchTerm,
       totalCount: 0,
       episodes: [],
@@ -127,13 +132,12 @@ export default defineEventHandler(async (event) => {
 
         // Read and parse JSON metadata file
         const jsonContent = await readFile(jsonFilePath, "utf-8");
-        const metadata = JSON.parse(jsonContent);
+        const metadata = JSON.parse(jsonContent) as VideoMetadata;
 
         // Extract video ID from thumbnail URL
         const thumbnailUrl = metadata.thumbnails?.default?.url || "";
-        const videoId = thumbnailUrl.match(/\/vi\/([^\/]+)\//)
-          ? thumbnailUrl.match(/\/vi\/([^\/]+)\//)[1]
-          : "";
+        const videoIdMatch = thumbnailUrl.match(/\/vi\/([^\/]+)\//);
+        const videoId = videoIdMatch ? videoIdMatch[1] : "";
 
         console.log(
           `Parsed ${subtitles.length} subtitle entries for ${episodeDir}`
@@ -198,7 +202,7 @@ export default defineEventHandler(async (event) => {
                 episode: episodeDir,
                 time: subtitle.start,
                 speaker,
-                text: `${match[2].trim()}`,
+                text: match[2].trim(),
                 thumbnailUrl: thumbnailUrl,
                 youtubeLink: youtubeLink,
               });
@@ -232,11 +236,15 @@ export default defineEventHandler(async (event) => {
       clearTimeout(timeout);
       throw innerError;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing word usage:", error);
     return {
+      word: (query?.word as string) || "",
+      totalCount: 0,
+      episodes: [],
+      speakers: {},
+      contexts: [],
       error: error.message || "Error analyzing word usage",
-      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     };
   }
 });

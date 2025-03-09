@@ -29,7 +29,7 @@
         <Pie :data="speakerChartData" :options="pieChartOptions" />
       </div>
 
-      <!-- Episode frequency line chart (changed from Bar to Line) -->
+      <!-- Episode frequency line chart -->
       <div class="chart-container">
         <Line :data="episodeChartData" :options="lineChartOptions" />
       </div>
@@ -47,7 +47,10 @@
         >
           <div class="context-layout">
             <!-- Thumbnail with YouTube link -->
-            <div class="thumbnail-container" v-if="context.thumbnailUrl">
+            <div
+              class="thumbnail-container"
+              v-if="context.thumbnailUrl && context.youtubeLink"
+            >
               <a
                 :href="context.youtubeLink"
                 target="_blank"
@@ -73,7 +76,10 @@
                   >[{{ formatTimecode(context.time) }}]</span
                 >
                 <span class="speaker">{{ context.speaker }}:</span>
-                <span class="text" v-html="highlightWord(context.text)"></span>
+                <span
+                  class="text"
+                  v-html="highlightWord(context.text, word)"
+                ></span>
               </p>
 
               <!-- YouTube link as text -->
@@ -94,8 +100,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, computed } from "vue";
+<script setup lang="ts">
+import { ref, watch, computed, onMounted } from "vue";
 import { Line, Pie } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -107,8 +113,13 @@ import {
   CategoryScale,
   LinearScale,
   ArcElement,
+  type ChartData,
+  type ChartOptions,
 } from "chart.js";
+import { formatUtils, chartUtils, wordAnalysisAPI } from "~/utils";
+import { type WordAnalysisData, type TimeRange } from "~/types";
 
+// Register ChartJS components
 ChartJS.register(
   Title,
   Tooltip,
@@ -120,19 +131,21 @@ ChartJS.register(
   ArcElement
 );
 
-const props = defineProps({
-  word: {
-    type: String,
-    required: true,
-  },
-});
+// Extract format utility methods
+const { formatEpisodeDate, formatTimecode, highlightWord } = formatUtils;
 
-const wordData = ref(null);
-const loading = ref(false);
-const error = ref(null);
+// Define props
+const props = defineProps<{
+  word: string;
+}>();
+
+// Component state
+const wordData = ref<WordAnalysisData | null>(null);
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
 
 // Computed property for time range
-const timeRange = computed(() => {
+const timeRange = computed<TimeRange>(() => {
   if (
     !wordData.value ||
     !wordData.value.episodes ||
@@ -154,44 +167,8 @@ const timeRange = computed(() => {
   return { firstDate, lastDate };
 });
 
-// Generate random colors for charts
-const generateColors = (count) => {
-  const colors = [];
-  for (let i = 0; i < count; i++) {
-    const r = Math.floor(Math.random() * 200) + 55;
-    const g = Math.floor(Math.random() * 200) + 55;
-    const b = Math.floor(Math.random() * 200) + 55;
-    colors.push(`rgba(${r}, ${g}, ${b}, 0.7)`);
-  }
-  return colors;
-};
-
-// Format episode date (from filename like 2024-07-24)
-const formatEpisodeDate = (episode) => {
-  if (!episode) return "";
-  const [year, month, day] = episode.split("-");
-  return `${day}.${month}.${year}`;
-};
-
-// Format timecode (from seconds to MM:SS)
-const formatTimecode = (timeInSeconds) => {
-  const minutes = Math.floor(timeInSeconds / 60);
-  const seconds = Math.floor(timeInSeconds % 60);
-  return `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
-};
-
-// Highlight the target word in context text
-const highlightWord = (text) => {
-  if (!props.word || !text) return text;
-
-  const regex = new RegExp(`(${props.word})`, "gi");
-  return text.replace(regex, '<strong class="highlight">$1</strong>');
-};
-
 // Computed properties for chart data
-const episodeChartData = computed(() => {
+const episodeChartData = computed<ChartData<"line">>(() => {
   if (!wordData.value) return { datasets: [] };
 
   // Create a copy of episodes array
@@ -202,6 +179,7 @@ const episodeChartData = computed(() => {
 
   const episodes = episodesData.map((ep) => formatEpisodeDate(ep.date));
   const counts = episodesData.map((ep) => ep.count);
+
   // Generate a single color for the line
   const lineColor = "rgba(75, 192, 192, 0.8)";
 
@@ -224,12 +202,12 @@ const episodeChartData = computed(() => {
   };
 });
 
-const speakerChartData = computed(() => {
+const speakerChartData = computed<ChartData<"pie">>(() => {
   if (!wordData.value || !wordData.value.speakers) return { datasets: [] };
 
   const speakers = Object.keys(wordData.value.speakers);
-  const counts = speakers.map((speaker) => wordData.value.speakers[speaker]);
-  const colors = generateColors(speakers.length);
+  const counts = speakers.map((speaker) => wordData.value!.speakers[speaker]);
+  const colors = chartUtils.generateColors(speakers.length);
 
   return {
     labels: speakers,
@@ -237,7 +215,7 @@ const speakerChartData = computed(() => {
       {
         data: counts,
         backgroundColor: colors,
-        hoverBackgroundColor: colors.map((color) =>
+        hoverBackgroundColor: colors.map((color: string) =>
           color.replace("0.7", "0.9")
         ),
       },
@@ -246,7 +224,7 @@ const speakerChartData = computed(() => {
 });
 
 // Chart options
-const lineChartOptions = {
+const lineChartOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   scales: {
@@ -266,13 +244,15 @@ const lineChartOptions = {
   },
 };
 
-const pieChartOptions = {
+const pieChartOptions: ChartOptions<"pie"> = {
   responsive: true,
   maintainAspectRatio: false,
 };
 
-// Function to fetch word data from server
-const fetchWordData = async () => {
+/**
+ * Fetches word analysis data from the API
+ */
+const fetchWordData = async (): Promise<void> => {
   if (!props.word || props.word.trim() === "") return;
 
   // Avoid duplicate requests for the same word
@@ -282,34 +262,13 @@ const fetchWordData = async () => {
   error.value = null;
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const response = await fetch(
-      `/api/word-analysis?word=${encodeURIComponent(props.word.trim())}`,
-      {
-        signal: controller.signal,
-      }
-    );
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(
-        `Server responded with ${response.status}: ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
+    // Use the API service to fetch data
+    const data = await wordAnalysisAPI.fetchWordData(props.word);
     wordData.value = data;
   } catch (err) {
     console.error("Error fetching word data:", err);
-    error.value = err.message || "Failed to fetch word data";
+    error.value =
+      err instanceof Error ? err.message : "Failed to fetch word data";
     wordData.value = null;
   } finally {
     loading.value = false;
@@ -319,7 +278,7 @@ const fetchWordData = async () => {
 // Watch for changes to the word prop
 watch(
   () => props.word,
-  (newWord) => {
+  (newWord?: string) => {
     if (newWord && newWord.trim() !== "") {
       fetchWordData();
     } else {
@@ -328,6 +287,14 @@ watch(
   },
   { immediate: true }
 );
+
+// Clean up resources on component unmount
+onMounted(() => {
+  // Force initial fetch if the word is already set
+  if (props.word && props.word.trim() !== "") {
+    fetchWordData();
+  }
+});
 </script>
 
 <style scoped>

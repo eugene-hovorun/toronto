@@ -32,7 +32,7 @@
       </div>
     </div>
 
-    <WordChart :word="activeWord" v-if="activeWord" />
+    <WordChart v-if="activeWord" :word="activeWord" />
 
     <div class="instructions" v-else>
       <h2>Інструкції</h2>
@@ -53,35 +53,35 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
-import WordChart from "~/components/WordChart.vue";
+import { type CommonWord, COMMON_WORDS } from "~/types";
 
-// Common words to provide as shortcuts
-const commonWords = [
-  "Україна",
-  "кастомний",
-  "війна",
-  "донат",
-  "потік",
-  "гроші",
-  "збір",
-  "книжка",
-];
+// Component state
+const searchWord = ref<string>("");
+const activeWord = ref<string>("");
 
-const searchWord = ref("");
-const activeWord = ref("");
-
-const analyzeWord = () => {
-  if (searchWord.value.trim()) {
-    activeWord.value = searchWord.value.trim();
+/**
+ * Analyze the current search word
+ */
+const analyzeWord = (): void => {
+  const trimmedWord = searchWord.value.trim();
+  if (trimmedWord) {
+    activeWord.value = trimmedWord;
   }
 };
 
-const selectCommonWord = (word) => {
+/**
+ * Select a common word for analysis
+ * @param word - The word to analyze
+ */
+const selectCommonWord = (word: CommonWord | string): void => {
   searchWord.value = word;
   activeWord.value = word;
 };
+
+// Export common words for easier testing and reuse
+const commonWords = COMMON_WORDS;
 </script>
 
 <style scoped>
