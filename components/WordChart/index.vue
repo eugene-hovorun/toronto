@@ -1,96 +1,122 @@
 <template>
-  <div class="word-chart-container">
-    <div v-if="loading" class="loading">
-      <p>Завантаження аналізу слова...</p>
+  <div class="max-w-3xl mx-auto p-6">
+    <div
+      v-if="loading"
+      class="flex justify-center items-center h-52 border border-gray-200 rounded-lg"
+    >
+      <p class="text-gray-600">Завантаження аналізу слова...</p>
     </div>
-    <div v-else-if="error" class="error">
+    <div
+      v-else-if="error"
+      class="flex justify-center items-center h-52 bg-red-50 text-red-600 border border-red-200 rounded-lg"
+    >
       <p>Помилка: {{ error }}</p>
     </div>
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
-      class="no-data"
+      class="flex justify-center items-center h-52 border border-gray-200 rounded-lg"
     >
-      <p>Немає даних для слова "{{ word }}"</p>
+      <p class="text-gray-600">Немає даних для слова "{{ word }}"</p>
     </div>
-    <div v-else>
-      <h3>Вживання слова "{{ word }}" в епізодах</h3>
+    <div v-else class="space-y-6">
+      <h3 class="text-xl font-semibold text-gray-800">
+        Вживання слова "{{ word }}" в епізодах
+      </h3>
 
       <!-- Time range caption -->
-      <div class="time-range-caption">
-        <p>
+      <div class="text-center">
+        <p class="text-sm italic text-gray-500">
           Період аналізу: {{ formatEpisodeDate(timeRange.firstDate) }} —
           {{ formatEpisodeDate(timeRange.lastDate) }}
         </p>
       </div>
 
       <!-- Speaker distribution pie chart -->
-      <div class="chart-container">
-        <h4>Розподіл за спікерами</h4>
-        <Pie :data="speakerChartData" :options="pieChartOptions" />
+      <div class="mb-8">
+        <h4 class="text-lg font-medium text-gray-700 mb-3">
+          Розподіл за спікерами
+        </h4>
+        <div class="h-72">
+          <Pie :data="speakerChartData" :options="pieChartOptions" />
+        </div>
       </div>
 
       <!-- Episode frequency line chart -->
-      <div class="chart-container">
-        <Line :data="episodeChartData" :options="lineChartOptions" />
+      <div class="mb-8">
+        <div class="h-72">
+          <Line :data="episodeChartData" :options="lineChartOptions" />
+        </div>
       </div>
 
       <!-- Word context examples -->
       <div
-        class="contexts"
+        class="mt-8 pt-6 border-t border-gray-200"
         v-if="wordData.contexts && wordData.contexts.length"
       >
-        <h4>Приклади вживання:</h4>
-        <div
-          v-for="(context, index) in wordData.contexts.slice(0, 5)"
-          :key="index"
-          class="context-item"
-        >
-          <div class="context-layout">
-            <!-- Thumbnail with YouTube link -->
-            <div
-              class="thumbnail-container"
-              v-if="context.thumbnailUrl && context.youtubeLink"
-            >
-              <a
-                :href="context.youtubeLink"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="video-link"
+        <h4 class="text-lg font-medium text-gray-700 mb-4">
+          Приклади вживання:
+        </h4>
+        <div class="space-y-4">
+          <div
+            v-for="(context, index) in wordData.contexts.slice(0, 5)"
+            :key="index"
+            class="bg-gray-50 rounded-lg p-4"
+          >
+            <div class="flex gap-4">
+              <!-- Thumbnail with YouTube link -->
+              <div
+                class="relative flex-shrink-0 w-32 h-24 overflow-hidden rounded-md"
+                v-if="context.thumbnailUrl && context.youtubeLink"
               >
-                <img
-                  :src="context.thumbnailUrl"
-                  alt="Video thumbnail"
-                  class="thumbnail"
-                />
-                <div class="play-icon">▶</div>
-              </a>
-            </div>
-
-            <!-- Context text and metadata -->
-            <div class="context-content">
-              <p>
-                <span class="episode">{{
-                  formatEpisodeDate(context.episode)
-                }}</span>
-                <span class="timecode"
-                  >[{{ formatTimecode(context.time) }}]</span
-                >
-                <span class="speaker">{{ context.speaker }}:</span>
-                <span
-                  class="text"
-                  v-html="highlightWord(context.text, word)"
-                ></span>
-              </p>
-
-              <!-- YouTube link as text -->
-              <div class="youtube-link" v-if="context.youtubeLink">
                 <a
                   :href="context.youtubeLink"
                   target="_blank"
                   rel="noopener noreferrer"
+                  class="block"
                 >
-                  Переглянути на YouTube
+                  <img
+                    :src="context.thumbnailUrl"
+                    alt="Video thumbnail"
+                    class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                  <div
+                    class="absolute inset-0 flex items-center justify-center"
+                  >
+                    <div
+                      class="bg-black bg-opacity-70 text-white w-8 h-8 rounded-full flex items-center justify-center"
+                    >
+                      ▶
+                    </div>
+                  </div>
                 </a>
+              </div>
+
+              <!-- Context text and metadata -->
+              <div class="flex-grow">
+                <p>
+                  <span class="font-semibold mr-2">{{
+                    formatEpisodeDate(context.episode)
+                  }}</span>
+                  <span class="text-gray-500 mr-2"
+                    >[{{ formatTimecode(context.time) }}]</span
+                  >
+                  <span class="font-semibold text-blue-600 mr-2"
+                    >{{ context.speaker }}:</span
+                  >
+                  <span v-html="highlightWord(context.text, word)"></span>
+                </p>
+
+                <!-- YouTube link as text -->
+                <div class="mt-2" v-if="context.youtubeLink">
+                  <a
+                    :href="context.youtubeLink"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center text-red-600 hover:underline text-sm"
+                  >
+                    Переглянути на YouTube
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -173,134 +199,3 @@ onMounted(() => {
   }
 });
 </script>
-
-<style scoped>
-.word-chart-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.chart-container {
-  height: 300px;
-  margin-bottom: 30px;
-}
-
-.loading,
-.error,
-.no-data {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.error {
-  color: #d32f2f;
-  background-color: #ffebee;
-}
-
-.time-range-caption {
-  text-align: center;
-  margin-bottom: 15px;
-  font-style: italic;
-  color: #666;
-}
-
-.contexts {
-  margin-top: 20px;
-  border-top: 1px solid #eee;
-  padding-top: 20px;
-}
-
-.context-item {
-  margin-bottom: 15px;
-  padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-}
-
-.context-layout {
-  display: flex;
-  gap: 15px;
-}
-
-.thumbnail-container {
-  position: relative;
-  flex-shrink: 0;
-  width: 120px;
-  height: 90px;
-  overflow: hidden;
-  border-radius: 4px;
-}
-
-.thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.video-link:hover .thumbnail {
-  transform: scale(1.05);
-}
-
-.play-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-.context-content {
-  flex-grow: 1;
-}
-
-.episode {
-  font-weight: bold;
-  margin-right: 10px;
-}
-
-.timecode {
-  color: #666;
-  margin-right: 10px;
-}
-
-.speaker {
-  font-weight: bold;
-  color: #1976d2;
-  margin-right: 10px;
-}
-
-.highlight {
-  background-color: yellow;
-  padding: 0 2px;
-}
-
-.youtube-link {
-  margin-top: 8px;
-}
-
-.youtube-link a {
-  display: inline-flex;
-  align-items: center;
-  color: #ff0000;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.youtube-link a:hover {
-  text-decoration: underline;
-}
-</style>
