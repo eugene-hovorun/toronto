@@ -16,9 +16,9 @@ export const useWordChartData = (
 
   // Define constant colors for each speaker
   const SPEAKER_COLORS: Record<string, string> = {
-    Максим: "#F892AB", // Blue
-    Олександра: "#D57DFC", // Pink
-    Аліна: "#7FD374", // Green
+    Максим: "#F892AB",
+    Олександра: "#D57DFC",
+    Аліна: "#ff64c8",
   };
 
   // Computed property for time range
@@ -58,7 +58,7 @@ export const useWordChartData = (
     const counts = episodesData.map((ep) => ep.count);
 
     // Generate a single color for the line
-    const lineColor = "rgba(75, 192, 192, 0.8)";
+    const lineColor = "rgba(248, 146, 171, 0.8)";
 
     return {
       labels: episodes,

@@ -1,40 +1,39 @@
 <template>
   <div class="max-w-3xl mx-auto p-6">
-    <div
-      v-if="loading"
-      class="flex justify-center items-center h-52 border border-gray-200 rounded-lg"
-    >
-      <p class="text-gray-600">Завантаження аналізу слова...</p>
+    <div v-if="loading" class="flex justify-center items-center h-52">
+      <p class="font-default text-gray-600">Аналізуємо вживання слова...</p>
     </div>
     <div
       v-else-if="error"
       class="flex justify-center items-center h-52 bg-red-50 text-red-600 border border-red-200 rounded-lg"
     >
-      <p>Помилка: {{ error }}</p>
+      <p class="font-default">На жаль, сталася помилка: {{ error }}</p>
     </div>
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
       class="flex justify-center items-center h-52 border border-gray-200 rounded-lg"
     >
-      <p class="text-gray-600">Немає даних для слова "{{ word }}"</p>
+      <p class="font-default text-gray-600">
+        Слово "{{ word }}" не знайдено в жодному епізоді
+      </p>
     </div>
     <div v-else class="space-y-6">
-      <h3 class="text-xl font-semibold text-gray-800">
-        Вживання слова "{{ word }}" в епізодах
+      <h3 class="font-headline text-xl text-gray-800">
+        Як часто звучить "{{ word }}" у Потіках
       </h3>
 
       <!-- Time range caption -->
       <div class="text-center">
-        <p class="text-sm italic text-gray-500">
-          Період аналізу: {{ formatEpisodeDate(timeRange.firstDate) }} —
+        <p class="font-default text-sm italic text-gray-500">
+          Проаналізовані епізоди: {{ formatEpisodeDate(timeRange.firstDate) }} —
           {{ formatEpisodeDate(timeRange.lastDate) }}
         </p>
       </div>
 
       <!-- Speaker distribution pie chart -->
       <div class="mb-8">
-        <h4 class="text-lg font-medium text-gray-700 mb-3">
-          Розподіл за спікерами
+        <h4 class="font-headline text-lg text-gray-700 mb-3">
+          Хто найчастіше вживає це слово
         </h4>
         <div class="h-72">
           <Pie :data="speakerChartData" :options="pieChartOptions" />
@@ -53,8 +52,8 @@
         class="mt-8 pt-6 border-t border-gray-200"
         v-if="wordData.contexts && wordData.contexts.length"
       >
-        <h4 class="text-lg font-medium text-gray-700 mb-4">
-          Приклади вживання:
+        <h4 class="font-headline text-lg text-gray-700 mb-4">
+          Як це звучить у контексті:
         </h4>
         <div class="space-y-4">
           <div
@@ -76,7 +75,7 @@
                 >
                   <img
                     :src="context.thumbnailUrl"
-                    alt="Video thumbnail"
+                    alt="Прев'ю відео"
                     class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                   />
                   <div
@@ -93,7 +92,7 @@
 
               <!-- Context text and metadata -->
               <div class="flex-grow">
-                <p>
+                <p class="font-default">
                   <span class="font-semibold mr-2">{{
                     formatEpisodeDate(context.episode)
                   }}</span>
@@ -112,9 +111,9 @@
                     :href="context.youtubeLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center text-red-600 hover:underline text-sm"
+                    class="font-default inline-flex items-center text-red-600 hover:underline text-sm"
                   >
-                    Переглянути на YouTube
+                    Послухати цей момент
                   </a>
                 </div>
               </div>

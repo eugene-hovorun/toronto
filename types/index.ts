@@ -51,12 +51,12 @@ export interface ChartFormatOptions {
  */
 export const COMMON_WORDS = [
   "Україна",
-  "кастомний",
   "війна",
   "донат",
   "потік",
   "гроші",
   "збір",
+  "кастомний",
   "сатана",
 ] as const;
 

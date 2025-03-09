@@ -17,6 +17,10 @@ body {
   vertical-align: baseline;
 }
 
+body {
+  overflow-y: scroll;
+}
+
 .container {
   max-width: 1024px;
   margin: 0 auto;
