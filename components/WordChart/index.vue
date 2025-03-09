@@ -19,11 +19,20 @@
     </div>
 
     <div v-else class="space-y-6">
-      <!-- Time range caption -->
-      <div class="text-center">
-        <p class="font-default text-sm italic text-gray-500">
-          Проаналізовані епізоди: {{ formatEpisodeDate(timeRange.firstDate) }} —
-          {{ formatEpisodeDate(timeRange.lastDate) }}
+      <!-- Time range caption with total count -->
+      <div class="text-center font-default text-sm italic text-gray-500">
+        <p>
+          Проаналізовані епізоди:
+          <span class="font-medium text-blue-700">
+            {{ formatEpisodeDate(timeRange.firstDate) }} —
+            {{ formatEpisodeDate(timeRange.lastDate) }}
+          </span>
+        </p>
+        <p>
+          Загальна кількість вживань:
+          <span class="font-medium text-blue-700">
+            {{ wordData.totalCount }}
+          </span>
         </p>
       </div>
 
