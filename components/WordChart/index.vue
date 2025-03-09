@@ -1,44 +1,60 @@
+<!-- index.vue (WordChart) -->
 <template>
-  <div class="max-w-3xl mx-auto p-6">
-    <div v-if="loading" class="flex justify-center items-center h-52">
-      <p class="font-default text-gray-600">Аналізуємо вживання слова...</p>
+  <div class="max-w-3xl mx-auto">
+    <div v-if="loading" class="flex justify-center items-center h-56">
+      <div class="text-center">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mx-auto mb-3"
+        ></div>
+        <p class="font-default text-white text-lg">
+          Аналізуємо вживання слова...
+        </p>
+      </div>
     </div>
+
     <div
       v-else-if="error"
-      class="flex justify-center items-center h-52 bg-red-50 text-red-600 border border-red-200 rounded-lg"
+      class="flex justify-center items-center h-56 bg-red-50/90 backdrop-blur-sm text-red-600 border border-red-200 rounded-xl shadow-lg"
     >
-      <p class="font-default">На жаль, сталася помилка: {{ error }}</p>
+      <p class="font-default text-lg">На жаль, сталася помилка: {{ error }}</p>
     </div>
+
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
-      class="flex justify-center items-center h-52 border border-gray-200 rounded-lg"
+      class="flex justify-center items-center h-56 bg-white/80 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg"
     >
-      <p class="font-default text-gray-600">
+      <p class="font-default text-lg text-purple-800">
         Слово "{{ word }}" не знайдено в жодному епізоді
       </p>
     </div>
 
-    <div v-else class="space-y-6">
+    <div v-else class="space-y-8">
       <!-- Time range caption with total count -->
-      <div class="text-center font-default text-sm italic text-gray-500">
-        <p>
+      <div
+        class="text-center py-3 px-6 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
+      >
+        <p class="font-default text-base text-purple-900">
           Проаналізовані епізоди:
-          <span class="font-medium text-blue-700">
+          <span class="font-medium text-lg text-pink-700">
             {{ formatEpisodeDate(timeRange.firstDate) }} —
             {{ formatEpisodeDate(timeRange.lastDate) }}
           </span>
         </p>
-        <p>
+        <p class="font-default text-base text-purple-900 mt-1">
           Загальна кількість вживань:
-          <span class="font-medium text-blue-700">
+          <span class="font-medium text-lg text-pink-700">
             {{ wordData.totalCount }}
           </span>
         </p>
       </div>
 
       <!-- Speaker distribution pie chart -->
-      <div class="mb-8">
-        <h4 class="font-headline text-lg text-gray-700 mb-3">
+      <div
+        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-purple-200"
+      >
+        <h4
+          class="font-headline text-xl text-purple-900 mb-4 pb-2 border-b border-purple-100"
+        >
           Хто найчастіше вживає це слово
         </h4>
         <div class="h-72">
@@ -47,7 +63,9 @@
       </div>
 
       <!-- Episode frequency line chart -->
-      <div class="mb-8">
+      <div
+        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-purple-200"
+      >
         <div class="h-72">
           <Line :data="episodeChartData" :options="lineChartOptions" />
         </div>
@@ -55,22 +73,22 @@
 
       <!-- Word context examples -->
       <div
-        class="mt-8 pt-6"
+        class="mt-8 pt-2"
         v-if="wordData.contexts && wordData.contexts.length"
       >
-        <h4 class="font-headline text-lg text-gray-700 mb-4">
+        <h4 class="font-headline text-xl text-white drop-shadow-md mb-4 px-2">
           Як це звучить у контексті:
         </h4>
         <div class="space-y-4">
           <div
             v-for="(context, index) in wordData.contexts.slice(0, 5)"
             :key="index"
-            class="bg-gray-50 rounded-lg p-4"
+            class="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-purple-100/30 transition-all"
           >
             <div class="flex gap-4">
-              <!-- Thumbnail with timecode underneath -->
+              <!-- Thumbnail with timecode underneath - smaller size -->
               <div
-                class="relative flex-shrink-0 w-32 h-24 overflow-hidden rounded-md"
+                class="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden rounded-md"
                 v-if="context.thumbnailUrl && context.youtubeLink"
               >
                 <a
@@ -82,12 +100,12 @@
                   <img
                     :src="context.thumbnailUrl"
                     alt="Прев'ю відео"
-                    class="w-full h-full object-fill transition-transform duration-300 hover:scale-105"
+                    class="w-full h-full object-cover"
                   />
                 </a>
-                <!-- Timecode positioned under the thumbnail -->
+                <!-- Simplified timecode -->
                 <span
-                  class="absolute bottom-0 left-0 right-0 bg-zinc-600 bg-opacity-60 text-white text-xs py-1 text-center"
+                  class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-0.5 text-center"
                 >
                   {{ formatTimecode(context.time) }}
                 </span>
@@ -95,39 +113,35 @@
 
               <!-- Context text and metadata -->
               <div class="flex-grow">
-                <!-- Episode metadata in a more compact, scannable format -->
-                <div class="flex justify-between items-center mb-2 text-sm">
-                  <span
-                    class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-medium"
-                  >
-                    {{ context.speaker }}
-                  </span>
-                  <span class="font-medium text-gray-800">
-                    {{ formatEpisodeDate(context.episode) }}
-                  </span>
+                <!-- Simplified metadata - more subtle and minimal -->
+                <div
+                  class="flex justify-between items-center mb-3 text-xs text-gray-500"
+                >
+                  <span class="text-sm text-purple-700 font-medium">{{
+                    context.speaker
+                  }}</span>
+                  <span>{{ formatEpisodeDate(context.episode) }}</span>
                 </div>
 
-                <!-- Quote with improved readability - Main focus point -->
-                <div
-                  class="font-default bg-white p-4 rounded-md border-l-4 border-blue-300 my-2 shadow-sm"
-                >
+                <!-- Quote - no extra container, just the text -->
+                <div class="font-default">
                   <p
-                    class="text-gray-800 text-base"
+                    class="text-gray-800"
                     v-html="highlightWord(context.text, word)"
                   ></p>
                 </div>
 
-                <!-- Listen button - Small and subtle -->
+                <!-- Listen link - small and unobtrusive -->
                 <div v-if="context.youtubeLink" class="flex justify-end mt-2">
                   <a
                     :href="context.youtubeLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-gray-600 hover:text-red-600 text-xs flex items-center gap-1 transition-colors"
+                    class="text-gray-400 hover:text-purple-500 text-xs flex items-center gap-1 transition-colors"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      class="h-3.5 w-3.5"
+                      class="h-3 w-3"
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
@@ -191,7 +205,7 @@ const wordData = ref<WordAnalysisData | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 
-// Get chart data and options from utils
+// Get chart data and options from utils - we'll customize chart colors in this function
 const {
   timeRange,
   episodeChartData,
@@ -201,7 +215,10 @@ const {
   fetchWordData,
 } = useWordChartData(props, wordData, loading, error);
 
-// Watch for changes to the word prop
+// Customize chart options to match our color scheme
+// Note: This assumes the implementation of useWordChartData allows for customization
+// If not, you would override the options here
+
 watch(
   () => props.word,
   (newWord?: string) => {

@@ -1,6 +1,6 @@
 import { computed, type Ref } from "vue";
 import { type ChartData, type ChartOptions } from "chart.js";
-import { chartUtils, formatUtils, wordAnalysisAPI } from "~/utils";
+import { formatUtils, colorUtils, wordAnalysisAPI } from "~/utils";
 import { type WordAnalysisData, type TimeRange } from "~/types";
 
 /**
@@ -13,13 +13,15 @@ export const useWordChartData = (
   error: Ref<string | null>
 ) => {
   const { formatEpisodeDate } = formatUtils;
+  const {
+    themeColors,
+    getSpeakerColors,
+    generateThemedColors,
+    createHoverColors,
+  } = colorUtils;
 
-  // Define constant colors for each speaker
-  const SPEAKER_COLORS: Record<string, string> = {
-    Максим: "#F892AB",
-    Олександра: "#D57DFC",
-    Аліна: "#ff64c8",
-  };
+  // Get predefined speaker colors that match our theme
+  const SPEAKER_COLORS = getSpeakerColors();
 
   // Computed property for time range
   const timeRange = computed<TimeRange>(() => {
@@ -44,7 +46,7 @@ export const useWordChartData = (
     return { firstDate, lastDate };
   });
 
-  // Computed properties for chart data
+  // Computed properties for chart data with enhanced styling
   const episodeChartData = computed<ChartData<"line">>(() => {
     if (!wordData.value) return { datasets: [] };
 
@@ -57,8 +59,8 @@ export const useWordChartData = (
     const episodes = episodesData.map((ep) => formatEpisodeDate(ep.date));
     const counts = episodesData.map((ep) => ep.count);
 
-    // Generate a single color for the line
-    const lineColor = "rgba(248, 146, 171, 0.8)";
+    // Use theme colors for the line chart
+    const lineColor = themeColors.secondary; // Pink from our gradient
 
     return {
       labels: episodes,
@@ -66,14 +68,15 @@ export const useWordChartData = (
         {
           label: `Вживання слова "${props.word}"`,
           data: counts,
-          fill: false,
-          backgroundColor: lineColor,
+          fill: true,
+          backgroundColor: `${lineColor}20`, // Very light background
           borderColor: lineColor,
-          tension: 0.1,
-          pointBackgroundColor: lineColor,
+          tension: 0.4, // Smoother curve
+          pointBackgroundColor: themeColors.primary,
           pointBorderColor: "#fff",
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 2,
         },
       ],
     };
@@ -85,10 +88,18 @@ export const useWordChartData = (
     const speakers = Object.keys(wordData.value.speakers);
     const counts = speakers.map((speaker) => wordData.value!.speakers[speaker]);
 
-    // Use our predefined constant colors for each speaker instead of generating random colors
-    const colors = speakers.map(
-      (speaker) => SPEAKER_COLORS[speaker] || chartUtils.generateColors(1)[0]
+    // Use our predefined theme colors for each speaker
+    let colors = speakers.map(
+      (speaker) => SPEAKER_COLORS[speaker] || generateThemedColors(1)[0]
     );
+
+    // If we don't have specific colors for all speakers, generate a themed set
+    if (colors.some((color) => !color)) {
+      colors = generateThemedColors(speakers.length);
+    }
+
+    // Create hover colors
+    const hoverColors = createHoverColors(colors);
 
     return {
       labels: speakers,
@@ -96,20 +107,15 @@ export const useWordChartData = (
         {
           data: counts,
           backgroundColor: colors,
-          hoverBackgroundColor: colors.map((color: string) => {
-            // For hex colors, make them slightly lighter on hover
-            if (color.startsWith("#")) {
-              return color + "CC"; // Add 80% opacity
-            }
-            // For rgba colors (fallback from chartUtils)
-            return color.replace("0.7", "0.9");
-          }),
+          hoverBackgroundColor: hoverColors,
+          borderColor: "white",
+          borderWidth: 2,
         },
       ],
     };
   });
 
-  // Chart options
+  // Enhanced chart options that match our theme
   const lineChartOptions: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -119,13 +125,67 @@ export const useWordChartData = (
         title: {
           display: true,
           text: "Кількість вживань",
+          color: themeColors.text.primary,
+          font: {
+            weight: "bold",
+          },
+        },
+        grid: {
+          color: themeColors.chart.grid,
+        },
+        ticks: {
+          color: themeColors.text.primary,
+          font: {
+            weight: "bold",
+          },
         },
       },
       x: {
         title: {
           display: true,
           text: "Дата епізоду",
+          color: themeColors.text.primary,
+          font: {
+            weight: "bold",
+          },
         },
+        grid: {
+          color: themeColors.chart.grid,
+        },
+        ticks: {
+          color: themeColors.text.primary,
+          maxRotation: 45,
+          minRotation: 45,
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: themeColors.text.primary,
+          font: {
+            weight: "bold",
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: themeColors.chart.tooltip.background,
+        titleColor: themeColors.text.primary,
+        bodyColor: themeColors.text.secondary,
+        borderColor: themeColors.chart.tooltip.border,
+        borderWidth: 1,
+        padding: 10,
+        displayColors: true,
+        usePointStyle: true,
+      },
+    },
+    elements: {
+      line: {
+        tension: 0.4, // Smoother curve
+      },
+      point: {
+        radius: 5,
+        hoverRadius: 7,
       },
     },
   };
@@ -133,6 +193,28 @@ export const useWordChartData = (
   const pieChartOptions: ChartOptions<"pie"> = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top",
+        labels: {
+          color: themeColors.text.primary,
+          font: {
+            weight: "bold",
+          },
+          padding: 20,
+        },
+      },
+      tooltip: {
+        backgroundColor: themeColors.chart.tooltip.background,
+        titleColor: themeColors.text.primary,
+        bodyColor: themeColors.text.secondary,
+        borderColor: themeColors.chart.tooltip.border,
+        borderWidth: 1,
+        padding: 10,
+        displayColors: true,
+        usePointStyle: true,
+      },
+    },
   };
 
   /**
