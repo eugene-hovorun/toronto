@@ -57,7 +57,7 @@ export const COMMON_WORDS = [
   "потік",
   "гроші",
   "збір",
-  "книжка",
+  "сатана",
 ] as const;
 
 /**

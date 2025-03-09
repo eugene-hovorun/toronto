@@ -1,14 +1,15 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6 md:px-6">
     <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">
-      Аналіз промов у подкасті
+      Аналіз слів у Потіках
     </h1>
 
     <div class="bg-white rounded-xl shadow-md p-6 mb-8">
       <label
         for="word-input"
         class="block text-sm font-medium text-gray-700 mb-2"
-        >Введіть слово для аналізу:</label
+      >
+        Введіть слово для аналізу:</label
       >
       <div class="flex mb-4">
         <input
@@ -48,8 +49,8 @@
     <div v-else class="bg-white rounded-xl shadow-md p-6">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Інструкції</h2>
       <p class="text-gray-700 mb-4">
-        Введіть слово в пошукове поле, щоб проаналізувати його вживання в усіх
-        епізодах подкасту.
+        Введіть слово в пошукове поле, щоб проаналізувати його вживання в
+        епізодах подкасту за певний період.
       </p>
       <p class="text-gray-700 mb-2">Аналіз покаже:</p>
       <ul class="list-disc pl-6 mb-4 text-gray-700 space-y-2">
