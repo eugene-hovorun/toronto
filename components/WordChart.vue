@@ -23,15 +23,15 @@
         </p>
       </div>
 
-      <!-- Episode frequency bar chart -->
-      <div class="chart-container">
-        <Bar :data="episodeChartData" :options="barChartOptions" />
-      </div>
-
       <!-- Speaker distribution pie chart -->
       <div class="chart-container">
         <h4>Розподіл за спікерами</h4>
         <Pie :data="speakerChartData" :options="pieChartOptions" />
+      </div>
+
+      <!-- Episode frequency line chart (changed from Bar to Line) -->
+      <div class="chart-container">
+        <Line :data="episodeChartData" :options="lineChartOptions" />
       </div>
 
       <!-- Word context examples -->
@@ -96,13 +96,14 @@
 
 <script setup>
 import { ref, watch, computed } from "vue";
-import { Bar, Pie } from "vue-chartjs";
+import { Line, Pie } from "vue-chartjs";
 import {
   Chart as ChartJS,
   Title,
   Tooltip,
   Legend,
-  BarElement,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
   ArcElement,
@@ -112,7 +113,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  BarElement,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
   ArcElement
@@ -200,7 +202,8 @@ const episodeChartData = computed(() => {
 
   const episodes = episodesData.map((ep) => formatEpisodeDate(ep.date));
   const counts = episodesData.map((ep) => ep.count);
-  const colors = generateColors(episodes.length);
+  // Generate a single color for the line
+  const lineColor = "rgba(75, 192, 192, 0.8)";
 
   return {
     labels: episodes,
@@ -208,9 +211,14 @@ const episodeChartData = computed(() => {
       {
         label: `Вживання слова "${props.word}"`,
         data: counts,
-        backgroundColor: colors,
-        borderColor: colors.map((color) => color.replace("0.7", "1")),
-        borderWidth: 1,
+        fill: false,
+        backgroundColor: lineColor,
+        borderColor: lineColor,
+        tension: 0.1,
+        pointBackgroundColor: lineColor,
+        pointBorderColor: "#fff",
+        pointRadius: 4,
+        pointHoverRadius: 6,
       },
     ],
   };
@@ -238,9 +246,24 @@ const speakerChartData = computed(() => {
 });
 
 // Chart options
-const barChartOptions = {
+const lineChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: "Кількість вживань",
+      },
+    },
+    x: {
+      title: {
+        display: true,
+        text: "Дата епізоду",
+      },
+    },
+  },
 };
 
 const pieChartOptions = {
@@ -255,7 +278,6 @@ const fetchWordData = async () => {
   // Avoid duplicate requests for the same word
   if (loading.value) return;
 
-  console.log(`Fetching data for word: ${props.word}`);
   loading.value = true;
   error.value = null;
 
@@ -279,7 +301,6 @@ const fetchWordData = async () => {
     }
 
     const data = await response.json();
-    console.log(`Received data for "${props.word}"`, data);
 
     if (data.error) {
       throw new Error(data.error);
