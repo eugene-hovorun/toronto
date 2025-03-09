@@ -17,11 +17,8 @@
         Слово "{{ word }}" не знайдено в жодному епізоді
       </p>
     </div>
-    <div v-else class="space-y-6">
-      <h3 class="font-headline text-xl text-gray-800">
-        Як часто звучить "{{ word }}" у Потіках
-      </h3>
 
+    <div v-else class="space-y-6">
       <!-- Time range caption -->
       <div class="text-center">
         <p class="font-default text-sm italic text-gray-500">
@@ -49,7 +46,7 @@
 
       <!-- Word context examples -->
       <div
-        class="mt-8 pt-6 border-t border-gray-200"
+        class="mt-8 pt-6"
         v-if="wordData.contexts && wordData.contexts.length"
       >
         <h4 class="font-headline text-lg text-gray-700 mb-4">
@@ -62,7 +59,7 @@
             class="bg-gray-50 rounded-lg p-4"
           >
             <div class="flex gap-4">
-              <!-- Thumbnail with YouTube link -->
+              <!-- Thumbnail with timecode underneath -->
               <div
                 class="relative flex-shrink-0 w-32 h-24 overflow-hidden rounded-md"
                 v-if="context.thumbnailUrl && context.youtubeLink"
@@ -76,44 +73,62 @@
                   <img
                     :src="context.thumbnailUrl"
                     alt="Прев'ю відео"
-                    class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    class="w-full h-full object-fill transition-transform duration-300 hover:scale-105"
                   />
-                  <div
-                    class="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div
-                      class="bg-black bg-opacity-70 text-white w-8 h-8 rounded-full flex items-center justify-center"
-                    >
-                      ▶
-                    </div>
-                  </div>
                 </a>
+                <!-- Timecode positioned under the thumbnail -->
+                <span
+                  class="absolute bottom-0 left-0 right-0 bg-zinc-600 bg-opacity-60 text-white text-xs py-1 text-center"
+                >
+                  {{ formatTimecode(context.time) }}
+                </span>
               </div>
 
               <!-- Context text and metadata -->
               <div class="flex-grow">
-                <p class="font-default">
-                  <span class="font-semibold mr-2">{{
-                    formatEpisodeDate(context.episode)
-                  }}</span>
-                  <span class="text-gray-500 mr-2"
-                    >[{{ formatTimecode(context.time) }}]</span
+                <!-- Episode metadata in a more compact, scannable format -->
+                <div class="flex justify-between items-center mb-2 text-sm">
+                  <span
+                    class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-medium"
                   >
-                  <span class="font-semibold text-blue-600 mr-2"
-                    >{{ context.speaker }}:</span
-                  >
-                  <span v-html="highlightWord(context.text, word)"></span>
-                </p>
+                    {{ context.speaker }}
+                  </span>
+                  <span class="font-medium text-gray-800">
+                    {{ formatEpisodeDate(context.episode) }}
+                  </span>
+                </div>
 
-                <!-- YouTube link as text -->
-                <div class="mt-2" v-if="context.youtubeLink">
+                <!-- Quote with improved readability - Main focus point -->
+                <div
+                  class="font-default bg-white p-4 rounded-md border-l-4 border-blue-300 my-2 shadow-sm"
+                >
+                  <p
+                    class="text-gray-800 text-base"
+                    v-html="highlightWord(context.text, word)"
+                  ></p>
+                </div>
+
+                <!-- Listen button - Small and subtle -->
+                <div v-if="context.youtubeLink" class="flex justify-end mt-2">
                   <a
                     :href="context.youtubeLink"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="font-default inline-flex items-center text-red-600 hover:underline text-sm"
+                    class="text-gray-600 hover:text-red-600 text-xs flex items-center gap-1 transition-colors"
                   >
-                    Послухати цей момент
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-3.5 w-3.5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                    <span>Послухати</span>
                   </a>
                 </div>
               </div>
