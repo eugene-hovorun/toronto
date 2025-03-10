@@ -1,3 +1,4 @@
+// Modified to work on Vercel
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
@@ -14,8 +15,9 @@ const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
 // Minimum context length (in characters) considered meaningful
 const MIN_CONTEXT_LENGTH = 30;
 
-// Helper function to check if a context is meaningful enough to display
+// Helper functions remain the same...
 function isValidContext(text: string, searchTerm: string): boolean {
+  // existing code
   if (!text) return false;
 
   // Check if text is too short (less than 10 characters)
@@ -36,16 +38,15 @@ function isValidContext(text: string, searchTerm: string): boolean {
   return wordCount >= 3;
 }
 
-// Helper function to format timestamp for YouTube URL
 function formatYouTubeTimestamp(seconds: number): number {
-  // YouTube timestamp format is just seconds for any value
+  // existing code
   return Math.floor(seconds);
 }
 
-// Helper function to extract speaker from subtitle text
 function extractSpeakerAndText(
   text: string
 ): { speaker: string; text: string } | null {
+  // existing code
   const match = text.match(/\[([^\]]+)\](.*)/i);
   if (!match) return null;
 
@@ -55,12 +56,12 @@ function extractSpeakerAndText(
   };
 }
 
-// Function to extend context by including nearby subtitles when needed
 function extendContext(
   subtitles: any[],
   currentIndex: number,
   maxSubtitles: number = 2
 ): string {
+  // existing code
   let context = "";
   let subtitlesAdded = 0;
   let speaker = "";
@@ -133,8 +134,9 @@ export default defineEventHandler(async (event: H3Event) => {
     const searchTerm = word.trim().toLowerCase();
     console.log(`Processing search for term: ${searchTerm}`);
 
-    // Get all episode directories from the assets folder
-    const assetsDir = path.join(process.cwd(), "assets");
+    // Always use the public/assets directory
+    const assetsDir = path.join(process.cwd(), "public", "assets");
+
     console.log(`Looking in assets directory: ${assetsDir}`);
 
     if (!fs.existsSync(assetsDir)) {
@@ -149,6 +151,7 @@ export default defineEventHandler(async (event: H3Event) => {
       } as WordAnalysisData;
     }
 
+    // Rest of the code remains the same...
     const episodeDirs = await readdir(assetsDir);
     console.log(`Found ${episodeDirs.length} potential episode directories`);
 
