@@ -22,7 +22,7 @@
 
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
-      class="flex justify-center items-center h-40 sm:h-56 bg-white/80 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg p-4"
+      class="flex justify-center items-center h-40 sm:h-56 bg-white/60 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg p-4"
     >
       <p class="font-default text-base sm:text-lg text-purple-800">
         Слово "{{ word }}" не знайдено в жодному епізоді
@@ -32,7 +32,7 @@
     <div v-else class="space-y-6 sm:space-y-8">
       <!-- Time range caption with total count -->
       <div
-        class="text-center py-3 px-4 sm:px-6 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
+        class="text-center py-3 px-4 sm:px-6 bg-white/60 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
       >
         <p class="font-default text-sm sm:text-base text-purple-900">
           Проаналізовані епізоди:
@@ -53,7 +53,7 @@
 
       <!-- Speaker distribution pie chart -->
       <div
-        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
+        class="bg-white/60 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
       >
         <h4
           class="font-headline text-lg sm:text-xl text-purple-900 mb-3 sm:mb-4 pb-2 border-b border-purple-100"
@@ -67,7 +67,7 @@
 
       <!-- Episode frequency line chart -->
       <div
-        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
+        class="bg-white/60 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
       >
         <div class="h-60 sm:h-72">
           <Line :data="episodeChartData" :options="lineChartOptions" />
@@ -88,7 +88,7 @@
           <div
             v-for="(context, index) in wordData.contexts.slice(0, 5)"
             :key="index"
-            class="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-purple-100/30 transition-all"
+            class="bg-white/60 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-purple-100/30 transition-all"
           >
             <div class="flex flex-col sm:flex-row sm:gap-4">
               <!-- Thumbnail with timecode underneath - smaller size -->
@@ -123,7 +123,8 @@
                   class="flex justify-between items-center mb-2 sm:mb-3 text-xs text-gray-500"
                 >
                   <span
-                    class="text-xs sm:text-sm text-purple-700 font-medium"
+                    class="text-xs sm:text-sm font-headline"
+                    :style="{ color: getSpeakerColor(context.speaker) }"
                     >{{ context.speaker }}</span
                   >
                   <span>{{ formatEpisodeDate(context.episode) }}</span>
@@ -170,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { Line, Pie } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -184,7 +185,8 @@ import {
   ArcElement,
 } from "chart.js";
 import { useWordChartData } from "./utils";
-import { type WordAnalysisData, type TimeRange } from "~/types";
+// import { formatUtils, colorUtils, wordAnalysisAPI } from "~/utils";
+import { type WordAnalysisData } from "~/types";
 
 // Register ChartJS components
 ChartJS.register(
@@ -200,6 +202,7 @@ ChartJS.register(
 
 // Extract format utility methods
 const { formatEpisodeDate, formatTimecode, highlightWord } = formatUtils;
+const { getSpeakerColors } = colorUtils;
 
 // Define props
 const props = defineProps<{
@@ -210,6 +213,7 @@ const props = defineProps<{
 const wordData = ref<WordAnalysisData | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
+const SPEAKER_COLORS = getSpeakerColors();
 
 // Get chart data and options from utils - we'll customize chart colors in this function
 const {
@@ -220,6 +224,13 @@ const {
   pieChartOptions,
   fetchWordData,
 } = useWordChartData(props, wordData, loading, error);
+
+// Function to get color for a specific speaker
+const getSpeakerColor = (speaker: string): string => {
+  // Use the predefined color from SPEAKER_COLORS if available
+  // Otherwise fall back to the default purple color
+  return SPEAKER_COLORS[speaker] || "#6B21A8"; // Default purple color as fallback
+};
 
 // Watch for word changes and fetch data
 watch(

@@ -10,7 +10,7 @@
     </h1>
 
     <div
-      class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-purple-100"
+      class="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-purple-100"
     >
       <label
         for="word-input"
@@ -24,7 +24,7 @@
           v-model="searchWord"
           type="text"
           placeholder="Напишіть будь-яке слово..."
-          class="font-default w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/80 border border-purple-200 rounded-lg sm:rounded-l-lg sm:rounded-r-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none text-purple-900 placeholder-purple-300"
+          class="font-default w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/60 border border-purple-200 rounded-lg sm:rounded-l-lg sm:rounded-r-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none text-purple-900 placeholder-purple-300"
           @keyup.enter="analyzeWord"
         />
         <button
