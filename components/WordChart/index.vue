@@ -21,7 +21,7 @@
     </div>
 
     <div
-      v-else-if="!wordData || wordData.episodes.length === 0"
+      v-else-if="wordData && wordData.episodes.length === 0"
       class="flex justify-center items-center h-40 sm:h-56 bg-white/60 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg p-4"
     >
       <p class="font-default text-base sm:text-lg text-purple-800">
@@ -29,7 +29,7 @@
       </p>
     </div>
 
-    <div v-else class="space-y-6 sm:space-y-8">
+    <div v-else-if="wordData" class="space-y-6 sm:space-y-8">
       <!-- Time range caption with total count -->
       <div
         class="text-center py-3 px-4 sm:px-6 bg-white/60 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
@@ -76,7 +76,7 @@
 
       <!-- Word context examples -->
       <div
-        class="mt-6 sm:mt-8 pt-2"
+        class="mt-6 sm:mt-8 pb-16 pt-2"
         v-if="wordData.contexts && wordData.contexts.length"
       >
         <h4
@@ -110,7 +110,7 @@
                 </a>
                 <!-- Simplified timecode -->
                 <span
-                  class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-0.5 text-center"
+                  class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-3 text-center"
                 >
                   {{ formatTimecode(context.time) }}
                 </span>

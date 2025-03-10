@@ -11,6 +11,9 @@ const readFile = promisify(fs.readFile);
 // List of valid speakers to include in the analysis
 const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
 
+// Minimum context length (in characters) considered meaningful
+const MIN_CONTEXT_LENGTH = 30;
+
 // Helper function to check if a context is meaningful enough to display
 function isValidContext(text: string, searchTerm: string): boolean {
   if (!text) return false;
@@ -37,6 +40,81 @@ function isValidContext(text: string, searchTerm: string): boolean {
 function formatYouTubeTimestamp(seconds: number): number {
   // YouTube timestamp format is just seconds for any value
   return Math.floor(seconds);
+}
+
+// Helper function to extract speaker from subtitle text
+function extractSpeakerAndText(
+  text: string
+): { speaker: string; text: string } | null {
+  const match = text.match(/\[([^\]]+)\](.*)/i);
+  if (!match) return null;
+
+  return {
+    speaker: match[1].trim(),
+    text: match[2].trim(),
+  };
+}
+
+// Function to extend context by including nearby subtitles when needed
+function extendContext(
+  subtitles: any[],
+  currentIndex: number,
+  maxSubtitles: number = 2
+): string {
+  let context = "";
+  let subtitlesAdded = 0;
+  let speaker = "";
+
+  // Try to extract speaker from current subtitle
+  const currentSubtitleInfo = extractSpeakerAndText(
+    subtitles[currentIndex].text
+  );
+  if (currentSubtitleInfo) {
+    speaker = currentSubtitleInfo.speaker;
+  }
+
+  // Add current subtitle text
+  if (currentSubtitleInfo) {
+    context = currentSubtitleInfo.text;
+  } else {
+    context = subtitles[currentIndex].text;
+  }
+
+  // Look forward for additional context from same speaker
+  let forwardIndex = currentIndex + 1;
+  while (
+    forwardIndex < subtitles.length &&
+    subtitlesAdded < maxSubtitles &&
+    subtitles[forwardIndex].start <= subtitles[currentIndex].start + 10 // Within 10 seconds
+  ) {
+    const nextSubtitleInfo = extractSpeakerAndText(
+      subtitles[forwardIndex].text
+    );
+    if (nextSubtitleInfo && nextSubtitleInfo.speaker === speaker) {
+      context += " " + nextSubtitleInfo.text;
+      subtitlesAdded++;
+    }
+    forwardIndex++;
+  }
+
+  // If we still need more context, look backward too
+  let backwardIndex = currentIndex - 1;
+  while (
+    backwardIndex >= 0 &&
+    subtitlesAdded < maxSubtitles &&
+    subtitles[currentIndex].start - subtitles[backwardIndex].end <= 10 // Within 10 seconds
+  ) {
+    const prevSubtitleInfo = extractSpeakerAndText(
+      subtitles[backwardIndex].text
+    );
+    if (prevSubtitleInfo && prevSubtitleInfo.speaker === speaker) {
+      context = prevSubtitleInfo.text + " " + context;
+      subtitlesAdded++;
+    }
+    backwardIndex--;
+  }
+
+  return context;
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -149,7 +227,9 @@ export default defineEventHandler(async (event: H3Event) => {
         let episodeCount = 0;
 
         // Process each subtitle entry
-        for (const subtitle of subtitles) {
+        for (let i = 0; i < subtitles.length; i++) {
+          const subtitle = subtitles[i];
+
           // Parse the text content to extract speaker and speech
           const match = subtitle.text.match(/\[([^\]]+)\](.*)/i);
 
@@ -193,25 +273,32 @@ export default defineEventHandler(async (event: H3Event) => {
               (result.speakers[speaker] || 0) + occurrences;
 
             // Add to contexts (limited to avoid too much data)
-            // Only add if the context is valid and meaningful
-            if (
-              result.contexts.length < 20 &&
-              isValidContext(text, searchTerm)
-            ) {
-              // Create YouTube link with timestamp
-              const youtubeTimestamp = formatYouTubeTimestamp(subtitle.start);
-              const youtubeLink = videoId
-                ? `https://www.youtube.com/watch?v=${videoId}&t=${youtubeTimestamp}`
-                : null;
+            if (result.contexts.length < 20) {
+              // Check if we need to extend the context (if it's too short)
+              let contextText = text;
 
-              result.contexts.push({
-                episode: episodeDir,
-                time: subtitle.start,
-                speaker,
-                text: match[2].trim(),
-                thumbnailUrl: thumbnailUrl,
-                youtubeLink: youtubeLink,
-              });
+              // If the context is too short, extend it with nearby subtitles
+              if (contextText.length < MIN_CONTEXT_LENGTH) {
+                contextText = extendContext(subtitles, i, 2);
+              }
+
+              // Only add if the context is valid and meaningful
+              if (isValidContext(contextText, searchTerm)) {
+                // Create YouTube link with timestamp
+                const youtubeTimestamp = formatYouTubeTimestamp(subtitle.start);
+                const youtubeLink = videoId
+                  ? `https://www.youtube.com/watch?v=${videoId}&t=${youtubeTimestamp}`
+                  : null;
+
+                result.contexts.push({
+                  episode: episodeDir,
+                  time: subtitle.start,
+                  speaker,
+                  text: contextText,
+                  thumbnailUrl: thumbnailUrl,
+                  youtubeLink: youtubeLink,
+                });
+              }
             }
           }
         }
