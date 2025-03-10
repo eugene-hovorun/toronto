@@ -185,6 +185,8 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
                     continue;
                   }
 
+                  console.log(`Processing episode ${episodeDate}`);
+
                   // Process this episode
                   const subtitles = parseSRT(srtContent);
                   await processEpisode(
@@ -272,6 +274,8 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
             }
 
             if (srtContent && metadata) {
+              console.log(`Processing episode ${episodeDate}`);
+
               // Process this episode
               const subtitles = parseSRT(srtContent);
               await processEpisode(
@@ -356,6 +360,8 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
               }
 
               if (srtContent && metadata) {
+                console.log(`Processing episode ${episodeDate}`);
+
                 // Process this episode
                 const subtitles = parseSRT(srtContent);
                 await processEpisode(
@@ -377,25 +383,12 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
             }
           }
         }
-
-        console.log(`Processing episode ${episodeDate}`);
-
-        // Parse the SRT content
-        const subtitles = parseSRT(srtContent);
-
-        // Process this episode
-        await processEpisode(
-          result,
-          episodeDate,
-          subtitles,
-          metadata,
-          searchTerm
-        );
-      } catch (error) {
-        console.error(`Error processing episode ${episodeDate}:`, error);
+      } catch (err) {
+        console.log("useStorage approach failed:", err);
       }
     }
 
+    // Return the result after trying all strategies
     return result;
   } catch (error) {
     console.error("Error accessing server assets:", error);
