@@ -37,7 +37,7 @@
   background-size: 400% 400%;
   background-position: 0% 50%;
   background-attachment: fixed;
-  animation: gradient-animation 25s ease infinite;
+  animation: gradient-animation 26s ease infinite;
 }
 
 @keyframes gradient-animation {
