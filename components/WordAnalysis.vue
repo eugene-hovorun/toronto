@@ -1,4 +1,3 @@
-<!-- WordAnalysis.vue -->
 <template>
   <div class="max-w-4xl mx-auto">
     <h1
@@ -54,48 +53,29 @@
       </div>
     </div>
 
-    <WordChart v-if="activeWord" :word="activeWord" />
-
-    <div
-      v-else
-      class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-purple-100"
-    >
-      <h2
-        class="font-headline text-2xl text-purple-900 mb-5 border-b border-purple-100 pb-3"
-      >
-        Як це працює
-      </h2>
-      <p class="font-default text-purple-800 mb-5 leading-relaxed">
-        Цей інструмент допоможе зрозуміти, як часто і в якому контексті ведучі
-        Потіків використовують різні слова. Просто введіть слово, яке вас
-        цікавить.
-      </p>
-      <p class="font-default font-medium text-purple-900 mb-3">
-        Ви дізнаєтесь:
-      </p>
-      <ul class="list-disc pl-6 mb-6 space-y-3">
-        <li class="font-default text-purple-800">
-          Як змінювалась частота вживання слова з часом
-        </li>
-        <li class="font-default text-purple-800">
-          Хто з ведучих найчастіше його використовує
-        </li>
-        <li class="font-default text-purple-800">
-          Почуєте реальні приклади з епізодів
-        </li>
-      </ul>
-      <p
-        class="font-default text-purple-700 italic bg-purple-50 p-4 rounded-lg border-l-4 border-purple-300"
-      >
-        Спробуйте одне з популярних слів вгорі або введіть своє власне.
-      </p>
-    </div>
+    <WordChart :word="activeWord" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { type CommonWord, COMMON_WORDS } from "~/types";
+
+// Default word to analyze if none is provided
+const DEFAULT_WORD = "кастомний";
+
+// Define props
+const props = defineProps({
+  initialWord: {
+    type: String,
+    default: DEFAULT_WORD,
+  },
+});
+
+// Get route and router for navigation
+const router = useRouter();
+const route = useRoute();
 
 // Component state
 const searchWord = ref<string>("");
@@ -108,6 +88,8 @@ const analyzeWord = (): void => {
   const trimmedWord = searchWord.value.trim();
   if (trimmedWord) {
     activeWord.value = trimmedWord;
+    // Navigate to word page with the search term
+    router.push(`/word/${encodeURIComponent(trimmedWord)}`);
   }
 };
 
@@ -118,7 +100,35 @@ const analyzeWord = (): void => {
 const selectCommonWord = (word: CommonWord | string): void => {
   searchWord.value = word;
   activeWord.value = word;
+  // Navigate to word page with the selected word
+  router.push(`/word/${encodeURIComponent(word)}`);
 };
+
+// Initialize the component
+onMounted(() => {
+  // Set initial values based on props or query params
+  const wordFromQuery = (route.query.word as string) || null;
+  const wordToUse = wordFromQuery || props.initialWord || DEFAULT_WORD;
+
+  searchWord.value = wordToUse;
+  activeWord.value = wordToUse;
+
+  // If we're on the index page with a query param, redirect to the word page
+  if (route.path === "/" && wordFromQuery) {
+    router.replace(`/word/${encodeURIComponent(wordFromQuery)}`);
+  }
+});
+
+// Watch for route changes
+watch(
+  () => route.params.word,
+  (newWord) => {
+    if (newWord && typeof newWord === "string") {
+      searchWord.value = newWord;
+      activeWord.value = newWord;
+    }
+  }
+);
 
 // Export common words for easier testing and reuse
 const commonWords = COMMON_WORDS;

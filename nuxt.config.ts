@@ -8,4 +8,9 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+  nitro: {
+    prerender: {
+      routes: ["/word/кастомний"], // Prerender the default word route
+    },
+  },
 });

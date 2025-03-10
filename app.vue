@@ -1,7 +1,7 @@
 <template>
   <AppLayout>
     <div class="container">
-      <WordAnalysis />
+      <NuxtPage />
     </div>
   </AppLayout>
 </template>

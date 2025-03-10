@@ -1,4 +1,3 @@
-<!-- index.vue (WordChart) -->
 <template>
   <div class="max-w-3xl mx-auto">
     <div v-if="loading" class="flex justify-center items-center h-56">
@@ -215,13 +214,10 @@ const {
   fetchWordData,
 } = useWordChartData(props, wordData, loading, error);
 
-// Customize chart options to match our color scheme
-// Note: This assumes the implementation of useWordChartData allows for customization
-// If not, you would override the options here
-
+// Watch for word changes and fetch data
 watch(
   () => props.word,
-  (newWord?: string) => {
+  (newWord) => {
     if (newWord && newWord.trim() !== "") {
       fetchWordData();
     } else {
@@ -231,9 +227,8 @@ watch(
   { immediate: true }
 );
 
-// Clean up resources on component unmount
+// Force initial fetch if the word is already set
 onMounted(() => {
-  // Force initial fetch if the word is already set
   if (props.word && props.word.trim() !== "") {
     fetchWordData();
   }
