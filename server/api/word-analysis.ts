@@ -138,7 +138,7 @@ export default defineEventHandler(async (event: H3Event) => {
         const metadata = JSON.parse(jsonContent) as VideoMetadata;
 
         // Extract video ID from thumbnail URL
-        const thumbnailUrl = metadata.thumbnails?.default?.url || "";
+        const thumbnailUrl = metadata.thumbnails?.medium?.url || "";
         const videoIdMatch = thumbnailUrl.match(/\/vi\/([^\/]+)\//);
         const videoId = videoIdMatch ? videoIdMatch[1] : "";
 

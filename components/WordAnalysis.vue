@@ -1,50 +1,52 @@
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="w-full max-w-4xl mx-auto px-3 sm:px-0">
     <h1
-      class="font-headline text-4xl text-center text-white mb-10 drop-shadow-lg"
+      class="font-headline text-2xl sm:text-3xl md:text-4xl text-center text-white pt-8 mb-6 sm:mb-10 drop-shadow-lg"
     >
-      Словник Потіків
-      <span class="block mt-2 text-2xl font-light"
+      Словник "Потіків"
+      <span class="block mt-2 text-xl sm:text-2xl font-light"
         >Що і як часто говорять ведучі</span
       >
     </h1>
 
     <div
-      class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 mb-8 border border-purple-100"
+      class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-purple-100"
     >
       <label
         for="word-input"
-        class="block font-default text-lg font-medium text-purple-900 mb-3"
+        class="block font-default text-base sm:text-lg font-medium text-purple-900 mb-2 sm:mb-3"
       >
         Яке слово цікавить?
       </label>
-      <div class="flex mb-5">
+      <div class="flex flex-col sm:flex-row mb-4 sm:mb-5 gap-2 sm:gap-0">
         <input
           id="word-input"
           v-model="searchWord"
           type="text"
           placeholder="Напишіть будь-яке слово..."
-          class="font-default flex-1 py-3 px-4 bg-white/80 border border-purple-200 rounded-l-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none text-purple-900 placeholder-purple-300"
+          class="font-default w-full py-2 sm:py-3 px-3 sm:px-4 bg-white/80 border border-purple-200 rounded-lg sm:rounded-l-lg sm:rounded-r-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none text-purple-900 placeholder-purple-300"
           @keyup.enter="analyzeWord"
         />
         <button
           @click="analyzeWord"
           :disabled="!searchWord.trim()"
-          class="font-default bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium py-3 px-8 rounded-r-lg transition duration-300 shadow-md"
+          class="font-default bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium py-2 sm:py-3 px-6 sm:px-8 rounded-lg sm:rounded-l-none sm:rounded-r-lg transition duration-300 shadow-md"
         >
           Знайти
         </button>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <p class="font-default font-medium text-purple-900">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <p
+          class="font-default font-medium text-sm sm:text-base text-purple-900"
+        >
           Часті слова ведучих:
         </p>
         <div class="flex flex-wrap gap-2">
           <span
             v-for="(word, index) in commonWords"
             :key="index"
-            class="font-default px-4 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 rounded-full cursor-pointer hover:from-purple-200 hover:to-pink-200 transition duration-200 border border-purple-200/50 shadow-sm"
+            class="font-default px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm rounded-full cursor-pointer hover:from-purple-200 hover:to-pink-200 transition duration-200 border border-purple-200/50 shadow-sm"
             @click="selectCommonWord(word)"
           >
             {{ word }}

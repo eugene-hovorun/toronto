@@ -1,11 +1,11 @@
 <template>
-  <div class="max-w-3xl mx-auto">
-    <div v-if="loading" class="flex justify-center items-center h-56">
+  <div class="w-full max-w-3xl mx-auto px-3 sm:px-0">
+    <div v-if="loading" class="flex justify-center items-center h-40 sm:h-56">
       <div class="text-center">
         <div
-          class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mx-auto mb-3"
+          class="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-purple-700 mx-auto mb-3"
         ></div>
-        <p class="font-default text-white text-lg">
+        <p class="font-default text-white text-base sm:text-lg">
           Аналізуємо вживання слова...
         </p>
       </div>
@@ -13,35 +13,39 @@
 
     <div
       v-else-if="error"
-      class="flex justify-center items-center h-56 bg-red-50/90 backdrop-blur-sm text-red-600 border border-red-200 rounded-xl shadow-lg"
+      class="flex justify-center items-center h-40 sm:h-56 bg-red-50/90 backdrop-blur-sm text-red-600 border border-red-200 rounded-xl shadow-lg p-4"
     >
-      <p class="font-default text-lg">На жаль, сталася помилка: {{ error }}</p>
+      <p class="font-default text-base sm:text-lg">
+        На жаль, сталася помилка: {{ error }}
+      </p>
     </div>
 
     <div
       v-else-if="!wordData || wordData.episodes.length === 0"
-      class="flex justify-center items-center h-56 bg-white/80 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg"
+      class="flex justify-center items-center h-40 sm:h-56 bg-white/80 backdrop-blur-sm border border-purple-200 rounded-xl shadow-lg p-4"
     >
-      <p class="font-default text-lg text-purple-800">
+      <p class="font-default text-base sm:text-lg text-purple-800">
         Слово "{{ word }}" не знайдено в жодному епізоді
       </p>
     </div>
 
-    <div v-else class="space-y-8">
+    <div v-else class="space-y-6 sm:space-y-8">
       <!-- Time range caption with total count -->
       <div
-        class="text-center py-3 px-6 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
+        class="text-center py-3 px-4 sm:px-6 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-purple-200"
       >
-        <p class="font-default text-base text-purple-900">
+        <p class="font-default text-sm sm:text-base text-purple-900">
           Проаналізовані епізоди:
-          <span class="font-medium text-lg text-pink-700">
+          <span
+            class="font-medium text-base sm:text-lg text-pink-700 block sm:inline mt-1 sm:mt-0"
+          >
             {{ formatEpisodeDate(timeRange.firstDate) }} —
             {{ formatEpisodeDate(timeRange.lastDate) }}
           </span>
         </p>
-        <p class="font-default text-base text-purple-900 mt-1">
+        <p class="font-default text-sm sm:text-base text-purple-900 mt-1">
           Загальна кількість вживань:
-          <span class="font-medium text-lg text-pink-700">
+          <span class="font-medium text-base sm:text-lg text-pink-700">
             {{ wordData.totalCount }}
           </span>
         </p>
@@ -49,45 +53,47 @@
 
       <!-- Speaker distribution pie chart -->
       <div
-        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-purple-200"
+        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
       >
         <h4
-          class="font-headline text-xl text-purple-900 mb-4 pb-2 border-b border-purple-100"
+          class="font-headline text-lg sm:text-xl text-purple-900 mb-3 sm:mb-4 pb-2 border-b border-purple-100"
         >
           Хто найчастіше вживає це слово
         </h4>
-        <div class="h-72">
+        <div class="h-60 sm:h-72">
           <Pie :data="speakerChartData" :options="pieChartOptions" />
         </div>
       </div>
 
       <!-- Episode frequency line chart -->
       <div
-        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-purple-200"
+        class="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 border border-purple-200"
       >
-        <div class="h-72">
+        <div class="h-60 sm:h-72">
           <Line :data="episodeChartData" :options="lineChartOptions" />
         </div>
       </div>
 
       <!-- Word context examples -->
       <div
-        class="mt-8 pt-2"
+        class="mt-6 sm:mt-8 pt-2"
         v-if="wordData.contexts && wordData.contexts.length"
       >
-        <h4 class="font-headline text-xl text-white drop-shadow-md mb-4 px-2">
+        <h4
+          class="font-headline text-lg sm:text-xl text-white drop-shadow-md mb-3 sm:mb-4 px-2"
+        >
           Як це звучить у контексті:
         </h4>
         <div class="space-y-4">
           <div
             v-for="(context, index) in wordData.contexts.slice(0, 5)"
             :key="index"
-            class="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-purple-100/30 transition-all"
+            class="bg-white/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-sm border border-purple-100/30 transition-all"
           >
-            <div class="flex gap-4">
+            <div class="flex flex-col sm:flex-row sm:gap-4">
               <!-- Thumbnail with timecode underneath - smaller size -->
               <div
-                class="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 overflow-hidden rounded-md"
+                class="relative flex-shrink-0 w-full sm:w-24 sm:h-24 h-36 overflow-hidden rounded-md mb-3 sm:mb-0"
                 v-if="context.thumbnailUrl && context.youtubeLink"
               >
                 <a
@@ -114,18 +120,19 @@
               <div class="flex-grow">
                 <!-- Simplified metadata - more subtle and minimal -->
                 <div
-                  class="flex justify-between items-center mb-3 text-xs text-gray-500"
+                  class="flex justify-between items-center mb-2 sm:mb-3 text-xs text-gray-500"
                 >
-                  <span class="text-sm text-purple-700 font-medium">{{
-                    context.speaker
-                  }}</span>
+                  <span
+                    class="text-xs sm:text-sm text-purple-700 font-medium"
+                    >{{ context.speaker }}</span
+                  >
                   <span>{{ formatEpisodeDate(context.episode) }}</span>
                 </div>
 
                 <!-- Quote - no extra container, just the text -->
                 <div class="font-default">
                   <p
-                    class="text-gray-800"
+                    class="text-sm sm:text-base text-gray-800"
                     v-html="highlightWord(context.text, word)"
                   ></p>
                 </div>
