@@ -104,7 +104,7 @@
                 >
                   <img
                     :src="context.thumbnailUrl"
-                    alt="Прев'ю відео"
+                    alt="Прев'ю"
                     class="w-full h-full object-cover"
                   />
                 </a>
