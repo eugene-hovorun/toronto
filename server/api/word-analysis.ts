@@ -1,13 +1,6 @@
-// Improved to handle multiple file access methods
-import fs from "fs";
-import path from "path";
-import { promisify } from "util";
 import { parseSRT } from "~/utils";
 import { H3Event } from "h3";
 import type { WordAnalysisData, VideoMetadata } from "~/types";
-
-const readdir = promisify(fs.readdir);
-const readFile = promisify(fs.readFile);
 
 // List of valid speakers to include in the analysis
 const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
@@ -15,7 +8,7 @@ const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
 // Minimum context length (in characters) considered meaningful
 const MIN_CONTEXT_LENGTH = 30;
 
-// Helper functions remain the same...
+// Helper functions
 function isValidContext(text: string, searchTerm: string): boolean {
   if (!text) return false;
   if (text.length < 10) return false;
@@ -49,7 +42,6 @@ function extendContext(
   currentIndex: number,
   maxSubtitles: number = 2
 ): string {
-  // Implementation remains the same
   let context = "";
   let subtitlesAdded = 0;
   let speaker = "";
@@ -103,338 +95,175 @@ function extendContext(
 }
 
 /**
- * Method 1: Try to access files using Nuxt's storage API
+ * Improved function to access episode data from server assets
  */
-async function getDataUsingStorageAPI(
-  result: WordAnalysisData,
-  searchTerm: string
-) {
-  console.log("Attempting to access files using Nuxt storage API");
+async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
+  const result: WordAnalysisData = {
+    word: searchTerm,
+    totalCount: 0,
+    episodes: [],
+    speakers: {},
+    contexts: [],
+  };
 
   try {
-    // Use Nuxt's storage API to access server assets
-    const assets = useStorage("assets:server");
+    // Use Node.js fs module to read directories
+    // This approach works better for local development and in serverless environments
 
-    // First, let's try to list all available keys to understand what's available
-    const allKeys = await assets.getKeys();
-    console.log(`Found ${allKeys.length} total keys in storage`);
+    // Get actual server runtime config to find base directory
+    const config = useRuntimeConfig();
+    console.log("Runtime config available:", !!config);
 
-    if (allKeys.length > 0) {
-      console.log("Sample keys:", allKeys.slice(0, 3));
-    }
-
-    // Try different possible paths for episodes
-    const possiblePaths = [
-      "episodes",
-      "",
-      "assets/episodes",
-      "server/assets/episodes",
+    // Define paths to check - in order of preference
+    const basePaths = [
+      "./server/assets/episodes", // Standard Nuxt 3 server directory
+      "./public/episodes", // Public directory
+      "./assets/episodes", // Another common location
     ];
 
-    for (const basePath of possiblePaths) {
-      try {
-        console.log(`Trying base path: "${basePath}"`);
+    // Debug: Log current directory
+    console.log("Current directory structure:");
+    try {
+      const { readdir } = await import("fs/promises");
+      const currentDirFiles = await readdir(".");
+      console.log("Root directory:", currentDirFiles);
 
-        // Filter keys that look like episode directories
-        const episodePattern = new RegExp(
-          `${basePath ? basePath + "/" : ""}(\\d{4}-\\d{2}-\\d{2})`
-        );
-        const episodeDirs = allKeys
-          .filter((key) => episodePattern.test(key))
-          .map((key) => {
-            const match = key.match(/(\d{4}-\d{2}-\d{2})/);
-            return match ? match[1] : null;
-          })
-          .filter((date): date is string => date !== null)
-          // Remove duplicates
-          .filter((date, index, self) => self.indexOf(date) === index);
+      // Try to see what's in the server directory if it exists
+      if (currentDirFiles.includes("server")) {
+        const serverFiles = await readdir("./server");
+        console.log("Server directory:", serverFiles);
 
-        if (episodeDirs.length > 0) {
-          console.log(
-            `Found ${episodeDirs.length} episode directories using pattern ${episodePattern}`
-          );
-
-          // Sort directories by date (newest first)
-          episodeDirs.sort((a, b) => b.localeCompare(a));
-
-          // Process each episode
-          for (const episodeDate of episodeDirs) {
-            // Try different possible paths for SRT files
-            const possibleSrtPaths = [
-              `${
-                basePath ? basePath + "/" : ""
-              }${episodeDate}/${episodeDate}.srt`,
-              `${basePath ? basePath + "/" : ""}${episodeDate}.srt`,
-            ];
-
-            let srtContent = null;
-            let srtPath = null;
-
-            for (const path of possibleSrtPaths) {
-              if (await assets.hasItem(path)) {
-                srtContent = (await assets.getItem(path)) as string;
-                srtPath = path;
-                break;
-              }
-            }
-
-            if (!srtContent) {
-              console.warn(`SRT file not found for episode ${episodeDate}`);
-              continue;
-            }
-
-            // Try different possible paths for JSON files
-            const possibleJsonPaths = [
-              `${
-                basePath ? basePath + "/" : ""
-              }${episodeDate}/${episodeDate}.json`,
-              `${basePath ? basePath + "/" : ""}${episodeDate}.json`,
-            ];
-
-            let jsonContent = null;
-
-            for (const path of possibleJsonPaths) {
-              if (await assets.hasItem(path)) {
-                jsonContent = (await assets.getItem(path)) as string;
-                break;
-              }
-            }
-
-            if (!jsonContent) {
-              console.warn(`JSON file not found for episode ${episodeDate}`);
-              continue;
-            }
-
-            console.log(`Processing episode ${episodeDate} from ${srtPath}`);
-
-            // Process the content
-            const subtitles = parseSRT(srtContent);
-            const metadata = JSON.parse(jsonContent) as VideoMetadata;
-
-            // Process this episode using the standard logic
-            await processEpisode(
-              result,
-              episodeDate,
-              subtitles,
-              metadata,
-              searchTerm
-            );
-          }
-
-          // If we processed at least one episode, return true
-          if (result.episodes.length > 0) {
-            return true;
-          }
+        if (serverFiles.includes("assets")) {
+          const assetsFiles = await readdir("./server/assets");
+          console.log("Server assets directory:", assetsFiles);
         }
-      } catch (error) {
-        console.error(`Error trying base path "${basePath}":`, error);
       }
+    } catch (error) {
+      console.log("Error reading directories:", error);
     }
 
-    return false;
-  } catch (error) {
-    console.error("Error using Nuxt storage API:", error);
-    return false;
-  }
-}
+    // Find all episode directories
+    let episodeDirs: string[] = [];
+    let basePath = "";
 
-/**
- * Method 2: Try to access files using Node.js fs
- */
-async function getDataUsingNodeFS(
-  result: WordAnalysisData,
-  searchTerm: string
-) {
-  console.log("Attempting to access files using Node.js fs");
-
-  try {
-    // Try different possible locations for the assets
-    const possiblePaths = [
-      path.join(process.cwd(), "public", "assets"),
-      path.join(process.cwd(), "server", "assets", "episodes"),
-      path.join(process.cwd(), "server", "assets"),
-      path.join(process.cwd(), "assets"),
-      path.join(process.cwd(), ".output", "server", "assets"),
-    ];
-
-    for (const assetsDir of possiblePaths) {
+    for (const path of basePaths) {
       try {
-        console.log(`Checking path: ${assetsDir}`);
+        const { readdir } = await import("fs/promises");
+        console.log(`Checking for episodes in ${path}`);
 
-        if (!fs.existsSync(assetsDir)) {
-          console.log(`Path does not exist: ${assetsDir}`);
+        // Try to read the directory
+        let dirs: string[] = [];
+        try {
+          dirs = await readdir(path);
+          console.log(`Found in ${path}:`, dirs);
+        } catch (error) {
+          console.log(`Could not read ${path}`);
           continue;
         }
 
-        // Get all subdirectories
-        const entries = await readdir(assetsDir, { withFileTypes: true });
-        const episodeDirs = entries
-          .filter(
-            (entry) =>
-              entry.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(entry.name)
-          )
-          .map((entry) => entry.name);
+        // Filter for episode date directories (format: YYYY-MM-DD)
+        const validDirs = dirs.filter((dir) => /^\d{4}-\d{2}-\d{2}$/.test(dir));
 
-        console.log(
-          `Found ${episodeDirs.length} episode directories in ${assetsDir}`
-        );
-
-        if (episodeDirs.length === 0) continue;
-
-        // Sort directories by date (newest first)
-        episodeDirs.sort((a, b) => b.localeCompare(a));
-
-        // Process each episode
-        for (const episodeDir of episodeDirs) {
-          const srtFilePath = path.join(
-            assetsDir,
-            episodeDir,
-            `${episodeDir}.srt`
+        if (validDirs.length > 0) {
+          episodeDirs = validDirs;
+          basePath = path;
+          console.log(
+            `Found ${validDirs.length} episode directories in ${path}`
           );
-          const jsonFilePath = path.join(
-            assetsDir,
-            episodeDir,
-            `${episodeDir}.json`
-          );
-
-          if (!fs.existsSync(srtFilePath)) {
-            console.warn(`SRT file not found: ${srtFilePath}`);
-            continue;
-          }
-
-          if (!fs.existsSync(jsonFilePath)) {
-            console.warn(`JSON file not found: ${jsonFilePath}`);
-            continue;
-          }
-
-          console.log(`Processing files from ${srtFilePath}`);
-
-          // Read and parse SRT file
-          const srtContent = await readFile(srtFilePath, "utf-8");
-          const subtitles = parseSRT(srtContent);
-
-          // Read and parse JSON metadata file
-          const jsonContent = await readFile(jsonFilePath, "utf-8");
-          const metadata = JSON.parse(jsonContent) as VideoMetadata;
-
-          // Process this episode using the standard logic
-          await processEpisode(
-            result,
-            episodeDir,
-            subtitles,
-            metadata,
-            searchTerm
-          );
-        }
-
-        // If we processed at least one episode, return true
-        if (result.episodes.length > 0) {
-          return true;
+          break;
         }
       } catch (error) {
-        console.error(`Error checking path ${assetsDir}:`, error);
+        console.log(`Error checking ${path}:`, error);
       }
     }
 
-    return false;
-  } catch (error) {
-    console.error("Error using Node.js fs:", error);
-    return false;
-  }
-}
+    // Sort by date (newest first)
+    episodeDirs.sort((a, b) => b.localeCompare(a));
+    console.log(`Processing ${episodeDirs.length} episode directories`);
 
-/**
- * Method 3: Try to access files using fetch (URL-based approach)
- */
-async function getDataUsingFetch(result: WordAnalysisData, searchTerm: string) {
-  console.log("Attempting to access files using fetch");
+    // Fallback to hardcoded list if no episodes found
+    if (episodeDirs.length === 0) {
+      console.warn(
+        "No episode directories found. Using fallback sample episodes list."
+      );
+      episodeDirs = ["2023-01-01", "2023-01-15"]; // Example fallback
 
-  try {
-    // Example dates to try (recent ones first)
-    const possibleDates = [
-      "2024-07-24",
-      "2024-07-17",
-      "2024-07-10",
-      "2024-07-03",
-      "2024-06-26",
-      "2024-06-19",
-      "2024-06-12",
-      "2024-06-05",
-      "2024-05-29",
-      "2024-05-22",
-      "2024-05-15",
-      "2024-05-08",
-    ];
+      // Try to detect which basePath might work for reading files
+      for (const path of basePaths) {
+        try {
+          const { access } = await import("fs/promises");
+          await access(path);
+          basePath = path;
+          console.log(`Using fallback path: ${basePath}`);
+          break;
+        } catch (error) {
+          // Path not accessible
+        }
+      }
 
-    // Try to determine the base URL
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "https://potik.vercel.app";
+      // If still no valid path, default to the first one
+      if (!basePath) {
+        basePath = basePaths[0];
+        console.log(`Defaulting to path: ${basePath}`);
+      }
+    }
 
-    console.log(`Using base URL: ${baseUrl}`);
-
-    // Try different possible path formats
-    const pathFormats = [
-      "/assets/$DATE/$DATE.json",
-      "/api/assets/$DATE/$DATE.json",
-      "/server/assets/episodes/$DATE/$DATE.json",
-    ];
-
-    for (const pathFormat of pathFormats) {
+    // Process each episode
+    for (const episodeDate of episodeDirs) {
       try {
-        console.log(`Trying path format: ${pathFormat}`);
-        let processedAny = false;
+        // Use Node fs directly instead of Nitro storage
+        const { readFile } = await import("fs/promises");
 
-        for (const date of possibleDates) {
-          const jsonUrl = `${baseUrl}${pathFormat.replace(/\$DATE/g, date)}`;
-          const srtUrl = jsonUrl.replace(".json", ".srt");
+        // Construct full file paths
+        const srtPath = `${basePath}/${episodeDate}/${episodeDate}.srt`;
+        const jsonPath = `${basePath}/${episodeDate}/${episodeDate}.json`;
 
-          try {
-            console.log(`Trying to fetch: ${jsonUrl}`);
-            const jsonResponse = await fetch(jsonUrl);
+        console.log(`Trying to read SRT from: ${srtPath}`);
+        console.log(`Trying to read JSON from: ${jsonPath}`);
 
-            if (!jsonResponse.ok) {
-              console.log(
-                `Failed to fetch JSON for ${date}: ${jsonResponse.status}`
-              );
-              continue;
-            }
-
-            const srtResponse = await fetch(srtUrl);
-            if (!srtResponse.ok) {
-              console.log(
-                `Failed to fetch SRT for ${date}: ${srtResponse.status}`
-              );
-              continue;
-            }
-
-            const metadata = (await jsonResponse.json()) as VideoMetadata;
-            const srtContent = await srtResponse.text();
-
-            const subtitles = parseSRT(srtContent);
-
-            // Process this episode using the standard logic
-            await processEpisode(result, date, subtitles, metadata, searchTerm);
-            processedAny = true;
-
-            console.log(`Successfully processed ${date} using fetch`);
-          } catch (fetchError) {
-            console.warn(`Error fetching episode ${date}:`, fetchError);
-          }
+        // Read SRT file
+        let srtContent: string | null = null;
+        try {
+          srtContent = await readFile(srtPath, "utf8");
+          console.log(`Successfully read SRT file from ${srtPath}`);
+        } catch (error) {
+          console.warn(`Could not read SRT file from ${srtPath}:`, error);
+          continue;
         }
 
-        if (processedAny) {
-          return true;
+        // Read JSON metadata file
+        let metadata: VideoMetadata | null = null;
+        try {
+          const jsonContent = await readFile(jsonPath, "utf8");
+          metadata = JSON.parse(jsonContent);
+          console.log(`Successfully read JSON file from ${jsonPath}`);
+        } catch (error) {
+          console.warn(`Could not read JSON file from ${jsonPath}:`, error);
+          continue;
         }
-      } catch (formatError) {
-        console.error(`Error with path format "${pathFormat}":`, formatError);
+
+        console.log(`Processing episode ${episodeDate}`);
+
+        // Parse the SRT content
+        const subtitles = parseSRT(srtContent);
+
+        // Process this episode
+        await processEpisode(
+          result,
+          episodeDate,
+          subtitles,
+          metadata!,
+          searchTerm
+        );
+      } catch (error) {
+        console.error(`Error processing episode ${episodeDate}:`, error);
       }
     }
 
-    return false;
+    return result;
   } catch (error) {
-    console.error("Error using fetch:", error);
-    return false;
+    console.error("Error accessing server assets:", error);
+    return result;
   }
 }
 
@@ -562,52 +391,15 @@ export default defineEventHandler(async (event: H3Event) => {
     const searchTerm = word.trim().toLowerCase();
     console.log(`Processing search for term: "${searchTerm}"`);
 
-    // Initialize result object
-    const result: WordAnalysisData = {
-      word: searchTerm,
-      totalCount: 0,
-      episodes: [],
-      speakers: {},
-      contexts: [],
-    };
-
     // Add a timeout to prevent infinite hanging
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
-        reject(new Error("Analysis timed out after 30 seconds"));
-      }, 30000);
+        reject(new Error("Analysis timed out after 15 seconds"));
+      }, 15000);
     });
 
-    // Try all methods, one by one
-    const analysisPromise = (async () => {
-      // Method 1: Try to use Nuxt's storage API
-      const storageSuccess = await getDataUsingStorageAPI(result, searchTerm);
-
-      if (storageSuccess) {
-        console.log("Successfully retrieved data using Nuxt storage API");
-        return result;
-      }
-
-      // Method 2: Try to use Node.js fs
-      const fsSuccess = await getDataUsingNodeFS(result, searchTerm);
-
-      if (fsSuccess) {
-        console.log("Successfully retrieved data using Node.js fs");
-        return result;
-      }
-
-      // Method 3: Try to use fetch
-      const fetchSuccess = await getDataUsingFetch(result, searchTerm);
-
-      if (fetchSuccess) {
-        console.log("Successfully retrieved data using fetch");
-        return result;
-      }
-
-      // If we got here, none of the methods worked
-      console.warn("Could not retrieve data using any method");
-      return result;
-    })();
+    // Use the improved asset access method
+    const analysisPromise = getEpisodeData(searchTerm);
 
     // Race between analysis and timeout
     const finalResult = (await Promise.race([
