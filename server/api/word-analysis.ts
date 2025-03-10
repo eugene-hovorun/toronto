@@ -1,4 +1,4 @@
-// Modified to work on Vercel
+// Modified to work with assets in server/api directory
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
@@ -17,7 +17,6 @@ const MIN_CONTEXT_LENGTH = 30;
 
 // Helper functions remain the same...
 function isValidContext(text: string, searchTerm: string): boolean {
-  // existing code
   if (!text) return false;
 
   // Check if text is too short (less than 10 characters)
@@ -39,14 +38,12 @@ function isValidContext(text: string, searchTerm: string): boolean {
 }
 
 function formatYouTubeTimestamp(seconds: number): number {
-  // existing code
   return Math.floor(seconds);
 }
 
 function extractSpeakerAndText(
   text: string
 ): { speaker: string; text: string } | null {
-  // existing code
   const match = text.match(/\[([^\]]+)\](.*)/i);
   if (!match) return null;
 
@@ -61,7 +58,7 @@ function extendContext(
   currentIndex: number,
   maxSubtitles: number = 2
 ): string {
-  // existing code
+  // Existing implementation...
   let context = "";
   let subtitlesAdded = 0;
   let speaker = "";
@@ -134,9 +131,8 @@ export default defineEventHandler(async (event: H3Event) => {
     const searchTerm = word.trim().toLowerCase();
     console.log(`Processing search for term: ${searchTerm}`);
 
-    // Always use the public/assets directory
-    const assetsDir = path.join(process.cwd(), "public", "assets");
-
+    // MODIFIED: Look for assets directly in server/api/assets directory
+    const assetsDir = path.join(process.cwd(), "server", "api", "assets");
     console.log(`Looking in assets directory: ${assetsDir}`);
 
     if (!fs.existsSync(assetsDir)) {
@@ -147,7 +143,8 @@ export default defineEventHandler(async (event: H3Event) => {
         episodes: [],
         speakers: {},
         contexts: [],
-        error: "Assets directory not found",
+        error:
+          "Assets directory not found. Make sure to place assets in server/api/assets/",
       } as WordAnalysisData;
     }
 
