@@ -1,3 +1,6 @@
+export * from "./constants";
+import { COMMON_WORDS } from "./constants";
+
 /**
  * Interface for episode data in search results
  */
@@ -45,19 +48,6 @@ export interface ChartFormatOptions {
   dateFormat?: "DD.MM.YYYY" | "YYYY-MM-DD";
   timeFormat?: "MM:SS" | "HH:MM:SS";
 }
-
-/**
- * Common words used for quick analysis
- */
-export const COMMON_WORDS = [
-  "Україна",
-  "війна",
-  "донат",
-  "потік",
-  "збір",
-  "кастомний",
-  "сатана",
-] as const;
 
 /**
  * Type for common words
