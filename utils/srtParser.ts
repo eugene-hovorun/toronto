@@ -8,6 +8,8 @@ import type { Subtitle, SpeakerSpeech } from "~/types";
  */
 export function parseSRT(srtContent: string): Subtitle[] {
   // Split the content by double newline to get individual subtitle blocks
+  console.log("srtContent: ", typeof srtContent);
+  console.log("======================");
   const blocks: string[] = srtContent.trim().split(/\r?\n\r?\n/);
   const subtitles: Subtitle[] = [];
 

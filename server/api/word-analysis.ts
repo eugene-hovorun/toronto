@@ -3,6 +3,7 @@ import { H3Event } from "h3";
 import type { WordAnalysisData, VideoMetadata } from "~/types";
 import fs from "fs";
 import path from "path";
+import { Buffer } from "buffer";
 
 // List of valid speakers to include in the analysis
 const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
@@ -140,11 +141,20 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
         console.log(`Trying to read SRT from: ${srtKey}`);
 
         // Read SRT file
-        const srtContent = await storage.getItem<string>(srtKey);
+        let srtContent = await storage.getItem(srtKey);
         if (!srtContent) {
           console.warn(`Could not read SRT file for ${episodeDate}`);
           continue;
         }
+
+        // Convert Buffer/Uint8Array to string if needed
+        if (srtContent instanceof Uint8Array || Buffer.isBuffer(srtContent)) {
+          srtContent = new TextDecoder().decode(srtContent);
+        } else if (typeof srtContent !== "string") {
+          // If it's not a string or buffer, try to convert it
+          srtContent = String(srtContent);
+        }
+
         console.log(`Successfully read SRT file for ${episodeDate}`);
 
         // Read JSON metadata file
@@ -185,7 +195,7 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
           const jsonUrl = `/episodes/${episodeDate}/${episodeDate}.json`;
 
           // Fetch SRT file
-          const srtResponse: string = await $fetch(srtUrl, {
+          const srtResponse: any = await $fetch(srtUrl, {
             responseType: "text",
           });
           if (!srtResponse) {
