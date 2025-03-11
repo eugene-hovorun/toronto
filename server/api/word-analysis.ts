@@ -1,8 +1,6 @@
 import { parseSRT } from "~/utils";
 import { H3Event } from "h3";
 import type { WordAnalysisData, VideoMetadata } from "~/types";
-import fs from "fs";
-import path from "path";
 import { Buffer } from "buffer";
 
 // List of valid speakers to include in the analysis
@@ -176,55 +174,6 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
         );
       } catch (error) {
         console.error(`Error processing episode ${episodeDate}:`, error);
-      }
-    }
-
-    // If no episodes found with storage API, try fallback to hardcoded list
-    if (result.episodes.length === 0) {
-      console.log(
-        "No episodes found with storage API. Using fallback approach."
-      );
-
-      // Hardcoded list of known episodes
-      const knownEpisodes = ["2023-01-01", "2023-01-15", "2023-02-01"];
-
-      for (const episodeDate of knownEpisodes) {
-        try {
-          // Try to fetch from public directory as fallback
-          const srtUrl = `/episodes/${episodeDate}/${episodeDate}.srt`;
-          const jsonUrl = `/episodes/${episodeDate}/${episodeDate}.json`;
-
-          // Fetch SRT file
-          const srtResponse: any = await $fetch(srtUrl, {
-            responseType: "text",
-          });
-          if (!srtResponse) {
-            console.warn(`Could not fetch SRT from ${srtUrl}`);
-            continue;
-          }
-
-          // Fetch JSON metadata
-          const metadata = await $fetch<VideoMetadata>(jsonUrl);
-          if (!metadata) {
-            console.warn(`Could not fetch metadata from ${jsonUrl}`);
-            continue;
-          }
-
-          // Process this episode
-          const subtitles = parseSRT(srtResponse);
-          await processEpisode(
-            result,
-            episodeDate,
-            subtitles,
-            metadata,
-            searchTerm
-          );
-        } catch (error) {
-          console.error(
-            `Error processing fallback episode ${episodeDate}:`,
-            error
-          );
-        }
       }
     }
 
