@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from "vue";
+import { ref, watch } from "vue";
 import { Line, Pie } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -244,11 +244,4 @@ watch(
   },
   { immediate: true }
 );
-
-// Force initial fetch if the word is already set
-onMounted(() => {
-  if (props.word && props.word.trim() !== "") {
-    fetchWordData();
-  }
-});
 </script>

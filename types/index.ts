@@ -42,14 +42,6 @@ export interface TimeRange {
 }
 
 /**
- * Interface for chart data format options
- */
-export interface ChartFormatOptions {
-  dateFormat?: "DD.MM.YYYY" | "YYYY-MM-DD";
-  timeFormat?: "MM:SS" | "HH:MM:SS";
-}
-
-/**
  * Type for common words
  */
 export type CommonWord = (typeof COMMON_WORDS)[number];
