@@ -1,8 +1,8 @@
 import { parseSRT } from "~/utils";
 import { H3Event } from "h3";
 import type { WordAnalysisData, VideoMetadata } from "~/types";
-import { join } from "path";
 import fs from "fs";
+import path from "path";
 
 // List of valid speakers to include in the analysis
 const VALID_SPEAKERS = ["Максим", "Олександра", "Аліна"];
@@ -97,7 +97,7 @@ function extendContext(
 }
 
 /**
- * Improved function to access episode data from server assets
+ * Access episode data from server assets using the useStorage API, which is Nuxt's recommended approach
  */
 async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
   const result: WordAnalysisData = {
@@ -109,289 +109,118 @@ async function getEpisodeData(searchTerm: string): Promise<WordAnalysisData> {
   };
 
   try {
-    // Use a hybrid approach that works in both development and production
-    console.log(`Environment: ${process.env.NODE_ENV}`);
+    // Use Nuxt's storage API to access server assets
+    const storage = useStorage("assets:server");
+    console.log("Using Nuxt storage API to access episodes");
 
-    // Define possible strategies with fallbacks
-    let episodeDirs: string[] = [];
-    let isServerless = false;
+    // Get list of all episodes
+    const episodeFiles = await storage.getKeys();
+    console.log("Available episode files:", episodeFiles);
 
-    // Strategy 1: Try using fs/promises (works in development)
-    if (!episodeDirs.length) {
+    // Extract unique episode dates from the file paths
+    // Format example: 'episodes:2024-07-24:2024-07-24.json'
+    const episodeDates = episodeFiles
+      .map((key) => {
+        const match = key.match(/episodes:(\d{4}-\d{2}-\d{2}):/);
+        return match ? match[1] : null;
+      })
+      .filter((date): date is string => date !== null);
+
+    // Get unique episode dates
+    const uniqueEpisodeDates = [...new Set(episodeDates)];
+    console.log(`Found ${uniqueEpisodeDates.length} unique episode dates`);
+
+    // Process each episode
+    for (const episodeDate of uniqueEpisodeDates) {
       try {
-        const { readdir } = await import("fs/promises");
+        // Construct storage keys for SRT and JSON files using the correct format
+        const srtKey = `episodes:${episodeDate}:${episodeDate}.srt`;
+        const jsonKey = `episodes:${episodeDate}:${episodeDate}.json`;
 
-        // Define paths to check - in order of preference
-        const basePaths = [
-          "./server/assets/episodes",
-          "./public/episodes",
-          "./assets/episodes",
-        ];
+        console.log(`Trying to read SRT from: ${srtKey}`);
 
-        // Log current directory structure for debugging
-        try {
-          const currentDirFiles = await readdir(".");
-          console.log("Root directory:", currentDirFiles);
-        } catch (err) {
-          console.log("Cannot read current directory");
+        // Read SRT file
+        const srtContent = await storage.getItem<string>(srtKey);
+        if (!srtContent) {
+          console.warn(`Could not read SRT file for ${episodeDate}`);
+          continue;
         }
+        console.log(`Successfully read SRT file for ${episodeDate}`);
 
-        // Find episode directories
-        for (const path of basePaths) {
-          try {
-            console.log(`Checking for episodes in ${path}`);
-            const dirs = await readdir(path);
-
-            // Filter for episode date directories (format: YYYY-MM-DD)
-            const validDirs = dirs.filter((dir) =>
-              /^\d{4}-\d{2}-\d{2}$/.test(dir)
-            );
-
-            if (validDirs.length > 0) {
-              episodeDirs = validDirs;
-              console.log(
-                `Found ${validDirs.length} episode directories in ${path} using fs`
-              );
-
-              // Process each episode (development mode with direct file access)
-              for (const episodeDate of episodeDirs) {
-                try {
-                  const { readFile } = await import("fs/promises");
-
-                  // Construct full file paths
-                  const srtPath = `${path}/${episodeDate}/${episodeDate}.srt`;
-                  const jsonPath = `${path}/${episodeDate}/${episodeDate}.json`;
-
-                  console.log(`Trying to read SRT from: ${srtPath}`);
-
-                  // Read SRT file
-                  let srtContent: string | null = null;
-                  try {
-                    srtContent = await readFile(srtPath, "utf8");
-                    console.log(`Successfully read SRT file from ${srtPath}`);
-                  } catch (error) {
-                    console.warn(`Could not read SRT file from ${srtPath}`);
-                    continue;
-                  }
-
-                  // Read JSON metadata file
-                  let metadata: VideoMetadata | null = null;
-                  try {
-                    const jsonContent = await readFile(jsonPath, "utf8");
-                    metadata = JSON.parse(jsonContent);
-                    console.log(`Successfully read JSON file from ${jsonPath}`);
-                  } catch (error) {
-                    console.warn(`Could not read JSON file from ${jsonPath}`);
-                    continue;
-                  }
-
-                  console.log(`Processing episode ${episodeDate}`);
-
-                  // Process this episode
-                  const subtitles = parseSRT(srtContent);
-                  await processEpisode(
-                    result,
-                    episodeDate,
-                    subtitles,
-                    metadata!,
-                    searchTerm
-                  );
-                } catch (error) {
-                  console.error(
-                    `Error processing episode ${episodeDate}:`,
-                    error
-                  );
-                }
-              }
-
-              // Return the result if we successfully processed episodes
-              if (result.episodes.length > 0) {
-                return result;
-              }
-
-              break;
-            }
-          } catch (error) {
-            console.log(`Error checking ${path}:`, error);
-          }
+        // Read JSON metadata file
+        const metadata = await storage.getItem<VideoMetadata>(jsonKey);
+        if (!metadata) {
+          console.warn(`Could not read metadata for ${episodeDate}`);
+          continue;
         }
-      } catch (err) {
-        console.log("fs/promises approach failed, trying serverless approach");
-        isServerless = true;
-      }
-    }
+        console.log(`Successfully read metadata for ${episodeDate}`);
 
-    // Strategy 2: Try $fetch API (works in Vercel serverless)
-    if (!result.episodes.length || isServerless) {
-      console.log("Trying serverless/HTTP approach");
-
-      try {
-        // For Vercel, try accessing files via HTTP paths
-        // This works if files are in the public directory
-
-        // Defined hardcoded list of known episodes (best approach for serverless)
-        // TODO: In production, this list should be fetched from an API or defined in your code
-        const knownEpisodes = ["2023-01-01", "2023-01-15", "2023-02-01"];
-        episodeDirs = knownEpisodes;
-
-        console.log(
-          `Using ${episodeDirs.length} known episodes for serverless`
+        // Process this episode
+        const subtitles = parseSRT(srtContent);
+        await processEpisode(
+          result,
+          episodeDate,
+          subtitles,
+          metadata,
+          searchTerm
         );
-
-        // Process each episode (serverless mode with fetch)
-        for (const episodeDate of episodeDirs) {
-          try {
-            // Try to fetch the files from public URLs
-            // This works if your files are in the public directory
-            const srtUrl = `/episodes/${episodeDate}/${episodeDate}.srt`;
-            const jsonUrl = `/episodes/${episodeDate}/${episodeDate}.json`;
-
-            console.log(`Trying to fetch SRT from: ${srtUrl}`);
-
-            // Fetch SRT file
-            let srtContent: string | null = null;
-            try {
-              const srtResponse = await $fetch(srtUrl, {
-                responseType: "text",
-              });
-              if (srtResponse) {
-                srtContent = srtResponse.toString();
-                console.log(`Successfully fetched SRT file from ${srtUrl}`);
-              }
-            } catch (error) {
-              console.warn(`Could not fetch SRT file from ${srtUrl}`);
-              continue;
-            }
-
-            // Fetch JSON metadata file
-            let metadata: VideoMetadata | null = null;
-            try {
-              metadata = await $fetch(jsonUrl);
-              console.log(`Successfully fetched JSON file from ${jsonUrl}`);
-            } catch (error) {
-              console.warn(`Could not fetch JSON file from ${jsonUrl}`);
-              continue;
-            }
-
-            if (srtContent && metadata) {
-              console.log(`Processing episode ${episodeDate}`);
-
-              // Process this episode
-              const subtitles = parseSRT(srtContent);
-              await processEpisode(
-                result,
-                episodeDate,
-                subtitles,
-                metadata,
-                searchTerm
-              );
-            }
-          } catch (error) {
-            console.error(`Error processing episode ${episodeDate}:`, error);
-          }
-        }
-
-        // If we've processed episodes, return the result
-        if (result.episodes.length > 0) {
-          return result;
-        }
-      } catch (err) {
-        console.log("Serverless approach failed:", err);
+      } catch (error) {
+        console.error(`Error processing episode ${episodeDate}:`, error);
       }
     }
 
-    // Strategy 3: Use Nuxt's useStorage as last resort
-    if (!result.episodes.length) {
-      console.log("Trying useStorage approach");
+    // If no episodes found with storage API, try fallback to hardcoded list
+    if (result.episodes.length === 0) {
+      console.log(
+        "No episodes found with storage API. Using fallback approach."
+      );
 
-      try {
-        // Try using Nitro's storage API
-        const storage = useStorage();
+      // Hardcoded list of known episodes
+      const knownEpisodes = ["2023-01-01", "2023-01-15", "2023-02-01"];
 
-        // List of predefined episodes to check
-        const predefinedEpisodes = ["2023-01-01", "2023-01-15", "2023-02-01"];
-        episodeDirs = predefinedEpisodes;
+      for (const episodeDate of knownEpisodes) {
+        try {
+          // Try to fetch from public directory as fallback
+          const srtUrl = `/episodes/${episodeDate}/${episodeDate}.srt`;
+          const jsonUrl = `/episodes/${episodeDate}/${episodeDate}.json`;
 
-        // Possible base paths for storage
-        const storagePaths = [
-          "server:assets/episodes/",
-          "public:episodes/",
-          "assets:episodes/",
-        ];
-
-        // Process each episode (using storage API)
-        for (const episodeDate of episodeDirs) {
-          for (const storagePath of storagePaths) {
-            try {
-              // Try to get files using storage API
-              const srtKey = `${storagePath}${episodeDate}/${episodeDate}.srt`;
-              const jsonKey = `${storagePath}${episodeDate}/${episodeDate}.json`;
-
-              console.log(`Trying to read SRT from storage: ${srtKey}`);
-
-              // Get SRT file
-              let srtContent: string | null = null;
-              try {
-                srtContent = await storage.getItem<string>(srtKey);
-                if (srtContent) {
-                  console.log(
-                    `Successfully read SRT file from storage: ${srtKey}`
-                  );
-                }
-              } catch (error) {
-                console.warn(`Could not read SRT file from storage: ${srtKey}`);
-                continue;
-              }
-
-              // Get JSON metadata file
-              let metadata: VideoMetadata | null = null;
-              try {
-                metadata = await storage.getItem<VideoMetadata>(jsonKey);
-                if (metadata) {
-                  console.log(
-                    `Successfully read JSON file from storage: ${jsonKey}`
-                  );
-                }
-              } catch (error) {
-                console.warn(
-                  `Could not read JSON file from storage: ${jsonKey}`
-                );
-                continue;
-              }
-
-              if (srtContent && metadata) {
-                console.log(`Processing episode ${episodeDate}`);
-
-                // Process this episode
-                const subtitles = parseSRT(srtContent);
-                await processEpisode(
-                  result,
-                  episodeDate,
-                  subtitles,
-                  metadata,
-                  searchTerm
-                );
-
-                // Break out of storage path loop since we found this episode
-                break;
-              }
-            } catch (error) {
-              console.error(
-                `Error with storage path ${storagePath} for episode ${episodeDate}:`,
-                error
-              );
-            }
+          // Fetch SRT file
+          const srtResponse: string = await $fetch(srtUrl, {
+            responseType: "text",
+          });
+          if (!srtResponse) {
+            console.warn(`Could not fetch SRT from ${srtUrl}`);
+            continue;
           }
+
+          // Fetch JSON metadata
+          const metadata = await $fetch<VideoMetadata>(jsonUrl);
+          if (!metadata) {
+            console.warn(`Could not fetch metadata from ${jsonUrl}`);
+            continue;
+          }
+
+          // Process this episode
+          const subtitles = parseSRT(srtResponse);
+          await processEpisode(
+            result,
+            episodeDate,
+            subtitles,
+            metadata,
+            searchTerm
+          );
+        } catch (error) {
+          console.error(
+            `Error processing fallback episode ${episodeDate}:`,
+            error
+          );
         }
-      } catch (err) {
-        console.log("useStorage approach failed:", err);
       }
     }
 
-    // Return the result after trying all strategies
     return result;
   } catch (error) {
-    console.error("Error accessing server assets:", error);
+    console.error("Error accessing episodes:", error);
     return result;
   }
 }
