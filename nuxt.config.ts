@@ -13,4 +13,10 @@ export default defineNuxtConfig({
       routes: ["/word/кастомний"], // Prerender the default word route
     },
   },
+  app: {
+    head: {
+      title: "Кастомний аналізатор",
+      link: [{ rel: "icon", type: "image/png", href: "/favicon.png" }],
+    },
+  },
 });

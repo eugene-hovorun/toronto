@@ -3,7 +3,7 @@
     <h1
       class="font-headline text-2xl sm:text-3xl md:text-4xl text-center text-white pt-8 mb-6 sm:mb-10 drop-shadow-lg"
     >
-      Словник "Потіків"
+      Кастомний аналізатор
       <span class="block mt-2 text-xl sm:text-2xl font-light"
         >Що і як часто говорять ведучі</span
       >
