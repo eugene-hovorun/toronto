@@ -1,7 +1,12 @@
 import { computed, type Ref } from "vue";
 import { type ChartData, type ChartOptions } from "chart.js";
+import { Chart } from "chart.js";
+import { Filler } from "chart.js"; // Import the Filler plugin
 import { formatUtils, colorUtils, wordAnalysisAPI } from "~/utils";
 import { type WordAnalysisData, type TimeRange } from "~/types";
+
+// Register the Filler plugin
+Chart.register(Filler);
 
 /**
  * Hook that provides chart data and utilities for the WordChart component

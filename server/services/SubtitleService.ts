@@ -67,8 +67,22 @@ export class SubtitleService {
         if (contexts.length < 20) {
           // Get extended context if original speech is too short
           let contextText = speech;
-          if (contextText.length < MIN_CONTEXT_LENGTH) {
-            contextText = this.extendContext(subtitles, i, speaker);
+
+          // Always try to extend the context for richer information
+          contextText = this.extendContext(subtitles, i, speaker);
+
+          // Get conversational context from other speakers for more depth
+          const conversationalContext = this.getConversationalContext(
+            subtitles,
+            i
+          );
+
+          // Combine contexts if conversational context adds value
+          if (conversationalContext && conversationalContext.length > 0) {
+            contextText = this.combineContexts(
+              contextText,
+              conversationalContext
+            );
           }
 
           // Only add if context is valid and meaningful
@@ -101,12 +115,13 @@ export class SubtitleService {
 
   /**
    * Extends the context by adding nearby subtitles from the same speaker
+   * with enhanced context gathering
    */
   private extendContext(
     subtitles: Subtitle[],
     currentIndex: number,
     speaker: string,
-    maxSubtitles: number = 2
+    maxSubtitles: number = 4 // Increased from 2 to 4
   ): string {
     let context = "";
     let subtitlesAdded = 0;
@@ -117,13 +132,16 @@ export class SubtitleService {
       "";
     context = currentSpeech;
 
+    // Wider time gap for more context
+    const enhancedTimeGap = MAX_CONTEXT_TIME_GAP * 1.5;
+
     // Look forward for additional context
     let forwardIndex = currentIndex + 1;
     while (
       forwardIndex < subtitles.length &&
       subtitlesAdded < maxSubtitles &&
       subtitles[forwardIndex].start <=
-        subtitles[currentIndex].start + MAX_CONTEXT_TIME_GAP
+        subtitles[currentIndex].start + enhancedTimeGap
     ) {
       const nextSubtitleInfo = SrtParser.extractSpeakerAndSpeech(
         subtitles[forwardIndex].text
@@ -141,7 +159,7 @@ export class SubtitleService {
       backwardIndex >= 0 &&
       subtitlesAdded < maxSubtitles &&
       subtitles[currentIndex].start - subtitles[backwardIndex].end <=
-        MAX_CONTEXT_TIME_GAP
+        enhancedTimeGap
     ) {
       const prevSubtitleInfo = SrtParser.extractSpeakerAndSpeech(
         subtitles[backwardIndex].text
@@ -153,7 +171,126 @@ export class SubtitleService {
       backwardIndex--;
     }
 
-    return context;
+    return this.sanitizeContext(context);
+  }
+
+  /**
+   * Gets conversational context from other speakers to provide dialogue context
+   */
+  private getConversationalContext(
+    subtitles: Subtitle[],
+    currentIndex: number,
+    maxExchanges: number = 2
+  ): string {
+    let conversationalContext = "";
+    let exchangesAdded = 0;
+
+    // Get the current subtitle's speaker
+    const currentSpeakerInfo = SrtParser.extractSpeakerAndSpeech(
+      subtitles[currentIndex].text
+    );
+    if (!currentSpeakerInfo) return conversationalContext;
+
+    const currentSpeaker = currentSpeakerInfo.speaker;
+
+    // Time range for dialogue context (more focused than extended context)
+    const dialogueTimeGap = MAX_CONTEXT_TIME_GAP;
+
+    // Look backward first for previous exchanges
+    let backwardIndex = currentIndex - 1;
+    while (
+      backwardIndex >= 0 &&
+      exchangesAdded < maxExchanges &&
+      subtitles[currentIndex].start - subtitles[backwardIndex].end <=
+        dialogueTimeGap
+    ) {
+      const prevSubtitleInfo = SrtParser.extractSpeakerAndSpeech(
+        subtitles[backwardIndex].text
+      );
+
+      if (
+        prevSubtitleInfo &&
+        prevSubtitleInfo.speaker !== currentSpeaker &&
+        VALID_SPEAKERS.includes(prevSubtitleInfo.speaker)
+      ) {
+        conversationalContext =
+          `[${prevSubtitleInfo.speaker}]: ${prevSubtitleInfo.speech} ` +
+          conversationalContext;
+        exchangesAdded++;
+      }
+      backwardIndex--;
+    }
+
+    // Look forward for responses to the current speaker
+    exchangesAdded = 0; // Reset counter for forward exchanges
+    let forwardIndex = currentIndex + 1;
+    while (
+      forwardIndex < subtitles.length &&
+      exchangesAdded < maxExchanges &&
+      subtitles[forwardIndex].start <=
+        subtitles[currentIndex].start + dialogueTimeGap
+    ) {
+      const nextSubtitleInfo = SrtParser.extractSpeakerAndSpeech(
+        subtitles[forwardIndex].text
+      );
+
+      if (
+        nextSubtitleInfo &&
+        nextSubtitleInfo.speaker !== currentSpeaker &&
+        VALID_SPEAKERS.includes(nextSubtitleInfo.speaker)
+      ) {
+        if (conversationalContext) {
+          conversationalContext += " ";
+        }
+        conversationalContext += `[${nextSubtitleInfo.speaker}]: ${nextSubtitleInfo.speech}`;
+        exchangesAdded++;
+      }
+      forwardIndex++;
+    }
+
+    return conversationalContext;
+  }
+
+  /**
+   * Combines the main speaker context with conversational context
+   */
+  private combineContexts(
+    mainContext: string,
+    conversationalContext: string
+  ): string {
+    if (!conversationalContext) return mainContext;
+
+    // If conversation is short, combine them directly
+    if (conversationalContext.length < 100) {
+      return `${mainContext} (Context: ${conversationalContext})`;
+    }
+
+    // For longer conversations, use a more structured format
+    return `${mainContext}\n\nConversational context:\n${conversationalContext}`;
+  }
+
+  /**
+   * Sanitizes and formats the context for better readability
+   */
+  private sanitizeContext(text: string): string {
+    if (!text) return "";
+
+    // Remove excessive spaces
+    let sanitized = text.replace(/\s+/g, " ").trim();
+
+    // Capitalize first letter of sentences
+    sanitized = sanitized.replace(/(\.\s+|^\s*)([a-z])/g, (match, p1, p2) => {
+      return p1 + p2.toUpperCase();
+    });
+
+    // Fix common punctuation issues
+    sanitized = sanitized
+      .replace(/\s+\./g, ".")
+      .replace(/\s+,/g, ",")
+      .replace(/\s+\?/g, "?")
+      .replace(/\s+\!/g, "!");
+
+    return sanitized;
   }
 
   /**
@@ -173,7 +310,8 @@ export class SubtitleService {
       .split(/\s+/)
       .filter((word) => word.length > 0).length;
 
-    return wordCount >= 3;
+    // Increased minimum word requirement for more meaningful context
+    return wordCount >= 5; // Increased from 3 to 5
   }
 
   /**

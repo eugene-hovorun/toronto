@@ -17,6 +17,7 @@ export default defineNuxtConfig({
     head: {
       title: "Кастомний аналізатор",
       link: [{ rel: "icon", type: "image/png", href: "/favicon.png" }],
+      viewport: "width=device-width, initial-scale=1, maximum-scale=1",
     },
   },
 });
